@@ -74,7 +74,7 @@ class Timesheet(object):
     _DAYS = [datetime.date(2008, 9, _x).strftime('%A') for _x in range(1, 8)]
     _TASK_START_REGEXP = re.compile(r'^(\d{4})([ \w\/\.]*)$')
     _UNASSIGNED_TASK = 'Miscellaneous'
-    _LUNCH_TASK = 'Lunch'
+    _NON_WORKING = ['tea', 'lunch', 'afk']
 
     def __init__(self, timesheet):
         self.current_day = None
@@ -211,11 +211,16 @@ class Timesheet(object):
     def week_summary(self):
         days = self.tasks.keys()
         days.sort()
+        weeks_tasks = []
         for day in days:
             day_name = day.strftime('%A')
             print day_name
             print '-' * len(day_name)
             self._aggregate_timeslots(self.tasks[day])
+            weeks_tasks.extend(self.tasks[day])
+        print '\nWeek'
+        print '----'
+        self._aggregate_timeslots(weeks_tasks)
 
     def _aggregate_timeslots(self, timeslots):
         by_task = {}
@@ -227,8 +232,7 @@ class Timesheet(object):
         for task in tasks:
             task_time = sum([x['end'] - x['start'] for x in by_task[task]],
                             datetime.timedelta(0))
-
-            if not task == self._LUNCH_TASK:
+            if not task.lower() in self._NON_WORKING:
                 total_time += task_time
             print '%s: %s' % (task_time, task)
             for timeslot in by_task[task]:
@@ -250,7 +254,6 @@ def main():
     else:
         import doctest
         doctest.testmod()
-
 
 if __name__ == '__main__':
     main()
