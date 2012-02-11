@@ -15,6 +15,7 @@ AFK = ['tea', 'lunch', 'afk']
 ZERO = datetime.timedelta(0)
 ONE_DAY = datetime.timedelta(days=1)
 A_WEEK = datetime.timedelta(days=7)
+MAN_DAY = 7.5  # hours (lazy bugger)
 
 
 class TimeSheetError(Exception):
@@ -151,12 +152,12 @@ def print_summary(slots, groupers=None, indent=0, key='All'):
     print spaces + key
     for time, task, task_slots in sorted(group_by_task(slots)):
         if args.afk or task not in AFK:
-            print spaces + '{0}: {1}'.format(humanize_time(time), task)
+            print spaces + '{0}: {1}'.format(man_days(time), task)
             total_time += time
             if args.verbose:
                 for s in task_slots:
                     print s['note']
-    print spaces + 'TOTAL: %s' % humanize_time(total_time)
+    print spaces + 'TOTAL: %s' % man_days(total_time)
     print
 
     if groupers:
@@ -164,32 +165,39 @@ def print_summary(slots, groupers=None, indent=0, key='All'):
             print_summary(group, groupers[1:], indent + 1, k)
 
 
-def humanize_time(timedelta):
+def man_days(timedelta):
     """
-    Return ``timedelta`` in a human readable format.
+    Return ``timedelta`` in human readable man days.
 
     >>> t = datetime.timedelta(seconds=24 * 3600 + 3 * 3600 + 1200)
-    >>> humanize_time(t)
-    '27 hours, 20 minutes'
+    >>> man_days(t)
+    '3 days, 4 hours, 50 minutes'
 
     >>> t = datetime.timedelta(seconds=3600)
-    >>> humanize_time(t)
+    >>> man_days(t)
     '1 hour'
 
     >>> t = datetime.timedelta(seconds=480)
-    >>> humanize_time(t)
+    >>> man_days(t)
     '8 minutes'
 
     """
-    hours = timedelta.days * 24 + timedelta.seconds / 3600
-    minutes = timedelta.seconds % 3600 / 60
+    days = (timedelta.days * 24 * 3600 + timedelta.seconds) / (3600 * MAN_DAY)
+    hours = MAN_DAY * (days - int(days))
+    days = int(days)
+    minutes = 60 * (hours - int(hours))
+    hours = int(hours)
     time = ''
+    if days:
+        time += "{0} day{1}".format(days, "s" if days > 1 else "")
     if hours:
+        if time:
+            time += ', '
         time += "{0} hour{1}".format(hours, "s" if hours > 1 else "")
     if minutes:
         if time:
             time += ', '
-        time += "{0} minutes".format(minutes)
+        time += "{0:.0f} minutes".format(minutes)
     return time
 
 
