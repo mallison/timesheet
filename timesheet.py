@@ -141,17 +141,25 @@ def validate_time(slots, task, time):
             "Task %s cannot start before %s" % (task, slots[-1]['task']))
 
 
-def print_summary(slots):
+def print_summary(slots, groupers=None, indent=0, key='All'):
+    spaces = '    ' * indent
     total_time = ZERO
+    slots = list(slots)  # we need to iterate over it twice
+
+    print spaces + key
     for time, task, task_slots in sorted(group_by_task(slots)):
         if args.afk or task not in AFK:
-            print '{0}: {1}'.format(humanize_time(time), task)
+            print spaces + '{0}: {1}'.format(humanize_time(time), task)
             total_time += time
             if args.verbose:
                 for s in task_slots:
                     print s['note']
-    print 'TOTAL: %s' % humanize_time(total_time)
+    print spaces + 'TOTAL: %s' % humanize_time(total_time)
     print
+
+    if groupers:
+        for k, group in groupers[0](slots):
+            print_summary(group, groupers[1:], indent + 1, k)
 
 
 def humanize_time(timedelta):
@@ -227,7 +235,8 @@ def main():
         start_date = date_from_file_path(path)
         with open(path) as f:
             slots.extend(parse(start_date, f))
-    print_summary(slots)
+    groupers = (group_by_month,)
+    print_summary(slots, groupers)
 
 
 if __name__ == '__main__':
