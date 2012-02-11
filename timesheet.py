@@ -225,11 +225,6 @@ def main():
     start_date = date_from_file_path(args.timesheet)
     with open(args.timesheet) as f:
         slots = parse(start_date, f)
-    if args.daily:
-        for k, g in groupby(slots, lambda x: x['start'].strftime('%A')):
-            print k
-            print_summary(summarise(g))
-    print 'Week'
     print_summary(slots)
 
 
@@ -237,8 +232,6 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Process a time sheet.')
     parser.add_argument('timesheet',
                         help='path to time sheet file')
-    parser.add_argument('-d', '--daily', action='store_true',
-                        help="show summary per day")
     parser.add_argument('-v', '--verbose', dest='verbose', action='store_true',
                         help="show verbose output in summary")
     parser.add_argument('--afk', dest='afk', action='store_true',
