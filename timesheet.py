@@ -222,15 +222,18 @@ def _annotate_task_group(task, group):
 
 
 def main():
-    start_date = date_from_file_path(args.timesheet)
-    with open(args.timesheet) as f:
-        slots = parse(start_date, f)
+    slots = []
+    for path in sorted(args.timesheet):
+        start_date = date_from_file_path(path)
+        with open(path) as f:
+            slots.extend(parse(start_date, f))
     print_summary(slots)
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Process a time sheet.')
     parser.add_argument('timesheet',
+                        nargs='+',
                         help='path to time sheet file')
     parser.add_argument('-v', '--verbose', dest='verbose', action='store_true',
                         help="show verbose output in summary")
