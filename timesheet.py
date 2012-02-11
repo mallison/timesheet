@@ -13,6 +13,8 @@ DAYS = [datetime.date(2008, 9, d).strftime('%A') for d in range(1, 8)]
 TASK_START_REGEXP = re.compile(r'^(\d{2})(\d{2})([ \w\/\.\-]*)$')
 AFK = ['tea', 'lunch', 'afk']
 ZERO = datetime.timedelta(0)
+ONE_DAY = datetime.timedelta(days=1)
+A_WEEK = datetime.timedelta(days=7)
 
 
 class TimeSheetError(Exception):
@@ -235,7 +237,12 @@ def main():
         start_date = date_from_file_path(path)
         with open(path) as f:
             slots.extend(parse(start_date, f))
-    groupers = (group_by_month,)
+    date_range = slots[-1]['end'] - slots[0]['start']
+    groupers = []
+    if date_range > A_WEEK and args.weeks:
+        groupers.append(group_by_week)
+    if date_range > ONE_DAY and args.days:
+        groupers.append(group_by_day)
     print_summary(slots, groupers)
 
 
@@ -244,6 +251,10 @@ if __name__ == '__main__':
     parser.add_argument('timesheet',
                         nargs='+',
                         help='path to time sheet file')
+    parser.add_argument('-d', '--days', dest='days', action='store_true',
+                        help="group by day")
+    parser.add_argument('-w', '--weeks', dest='weeks', action='store_true',
+                        help="group by work week")
     parser.add_argument('-v', '--verbose', dest='verbose', action='store_true',
                         help="show verbose output in summary")
     parser.add_argument('--afk', dest='afk', action='store_true',
