@@ -5,6 +5,7 @@ import re
 from operator import itemgetter
 from itertools import groupby
 
+# TODO take list of files for summaries over longer than a week
 # TODO could probably do the parsing with one cunning regexp (remember
 # someone posted a perl prog to parse html with a regexp!)
 
