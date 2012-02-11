@@ -169,15 +169,15 @@ def man_days(timedelta):
     """
     Return ``timedelta`` in human readable man days.
 
-    >>> t = datetime.timedelta(seconds=24 * 3600 + 3 * 3600 + 1200)
+    >>> t = datetime.timedelta(seconds=3 * 7.5 * 3600 + 3 * 3600 + 1210)
     >>> man_days(t)
-    '3 days, 4 hours, 50 minutes'
+    '3 days, 3 hours, 20 minutes'
 
-    >>> t = datetime.timedelta(seconds=3600)
+    >>> t = datetime.timedelta(seconds=3625)
     >>> man_days(t)
     '1 hour'
 
-    >>> t = datetime.timedelta(seconds=480)
+    >>> t = datetime.timedelta(seconds=484)
     >>> man_days(t)
     '8 minutes'
 
@@ -185,20 +185,16 @@ def man_days(timedelta):
     days = (timedelta.days * 24 * 3600 + timedelta.seconds) / (3600 * MAN_DAY)
     hours = MAN_DAY * (days - int(days))
     days = int(days)
-    minutes = 60 * (hours - int(hours))
+    minutes = (60 * (hours - int(hours)))
     hours = int(hours)
-    time = ''
+    time = []
     if days:
-        time += "{0} day{1}".format(days, "s" if days > 1 else "")
+        time.append("{0} day{1}".format(days, "s" if days > 1 else ""))
     if hours:
-        if time:
-            time += ', '
-        time += "{0} hour{1}".format(hours, "s" if hours > 1 else "")
-    if minutes:
-        if time:
-            time += ', '
-        time += "{0:.0f} minutes".format(minutes)
-    return time
+        time.append("{0} hour{1}".format(hours, "s" if hours > 1 else ""))
+    if minutes >= 1:
+        time.append("{0:.0f} minutes".format(minutes))
+    return ', '.join(time)
 
 
 def date_from_file_path(file_path):
