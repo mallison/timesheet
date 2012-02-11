@@ -12,6 +12,7 @@ from itertools import groupby
 DAYS = [datetime.date(2008, 9, d).strftime('%A') for d in range(1, 8)]
 TASK_START_REGEXP = re.compile(r'^(\d{2})(\d{2})([ \w\/\.\-]*)$')
 AFK = ['tea', 'lunch', 'afk']
+ZERO = datetime.timedelta(0)
 
 
 class TimeSheetError(Exception):
@@ -140,54 +141,15 @@ def validate_time(slots, task, time):
             "Task %s cannot start before %s" % (task, slots[-1]['task']))
 
 
-def summarise(slots):
-    """
-    Return a dictionary keyed by task the value of which is a list
-    with the total time spent and the notes concatenated together.
-
-    >>> slots = parse(datetime.datetime(2012, 2, 6, 0, 0), '''
-    ... Monday
-    ... 0900 email
-    ... 0920 moderation
-    ... 1100 tea
-    ... 1115 moderation
-    ... 1300 lunch
-    ... 1400 weekly meeting
-    ... 1600 moderation
-    ... 1730
-    ... '''.splitlines(1))
-
-    >>> summarise(slots) == \
-    {
-    ...     'email': [datetime.timedelta(0, 1200), ''],
-    ...     'moderation': [datetime.timedelta(0, 17700), ''],
-    ...     'tea': [datetime.timedelta(0, 900), ''],
-    ...     'weekly meeting': [datetime.timedelta(0, 7200), ''],
-    ...     'lunch': [datetime.timedelta(0, 3600), ''],
-    ... }
-    True
-
-    """
-    # TODO use groupby here!!!
-    summary = {}
-    for slot in slots:
-        task = slot['task']
-        time = slot['end'] - slot['start']
-        summary.setdefault(task, [datetime.timedelta(0), ''])[0] += time
-        summary[task][1] += slot['note']
-    return summary
-
-
-def print_summary(summary):
-    total_time = datetime.timedelta(0)
-    for task, (time, notes) in sorted(
-        summary.items(), key=itemgetter(1)):
+def print_summary(slots):
+    total_time = ZERO
+    for time, task, task_slots in sorted(group_by_task(slots)):
         if args.afk or task not in AFK:
-            print '%s: %s' % (humanize_time(time), task)
-            if args.verbose:
-                for line in notes.splitlines():
-                    print '    %s' % line
+            print '{0}: {1}'.format(humanize_time(time), task)
             total_time += time
+            if args.verbose:
+                for s in task_slots:
+                    print s['note']
     print 'TOTAL: %s' % humanize_time(total_time)
     print
 
@@ -235,6 +197,30 @@ def date_from_file_path(file_path):
     return datetime.datetime.strptime(file_name, "%Y%m%d")
 
 
+def group_by_task(slots):
+    return (
+        _annotate_task_group(t, g) for t, g in
+        groupby(sorted(slots, key=itemgetter('task')), lambda x: x['task']))
+
+
+def group_by_day(slots):
+    return groupby(slots, lambda x: x['start'].strftime('%A'))
+
+
+def group_by_week(slots):
+    return groupby(slots, lambda x: x['start'].strftime('%W'))
+
+
+def group_by_month(slots):
+    return groupby(slots, lambda x: x['start'].strftime('%B'))
+
+
+def _annotate_task_group(task, group):
+    # assumes group is from groupby!
+    g = list(group)
+    return sum([s['end'] - s['start'] for s in g], ZERO), task, g
+
+
 def main():
     start_date = date_from_file_path(args.timesheet)
     with open(args.timesheet) as f:
@@ -244,7 +230,7 @@ def main():
             print k
             print_summary(summarise(g))
     print 'Week'
-    print_summary(summarise(slots))
+    print_summary(slots)
 
 
 if __name__ == '__main__':
