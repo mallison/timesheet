@@ -2,6 +2,7 @@ import argparse
 import datetime
 import os
 import re
+import subprocess
 from operator import itemgetter
 from itertools import groupby
 
@@ -96,8 +97,8 @@ def validate_day(current_day, next_day):
         raise TimeSheetError(
             "Week starts on %s not %s" % (DAYS[0], next_day))
     if current_day and not DAYS.index(current_day) == DAYS.index(next_day) - 1:
-            raise TimeSheetError(
-                "%s does not follow %s" % (next_day, current_day))
+        raise TimeSheetError(
+            "%s does not follow %s" % (next_day, current_day))
 
 
 def validate_previous_day(slots, previous_day):
@@ -154,15 +155,34 @@ def print_summary(slots, groupers=None, indent=0, key='All'):
         if args.afk or task not in AFK:
             print spaces + '{0}: {1}'.format(man_days(time), task)
             total_time += time
-            if args.verbose:
-                for s in task_slots:
-                    print s['note']
+            for s in task_slots:
+                if args.notes:
+                    print_indented(s['note'].strip(), indent + 1, "NOTE")
+                if args.repo:
+                    show_commits(s, indent + 1)
     print spaces + 'TOTAL: %s' % man_days(total_time)
     print
 
     if groupers:
         for k, group in groupers[0](slots):
             print_summary(group, groupers[1:], indent + 1, k)
+
+
+def show_commits(slot, indent):
+    # no git API as far as I can tell
+    log = subprocess.check_output(
+        ['git', 'log',
+         '--since', str(slot['start']),
+         '--until', str(slot['end']), '--pretty=format:%s'],
+        cwd=args.repo)
+    print_indented(log, indent, "GIT")
+
+
+def print_indented(text, indent, prefix=''):
+    if text:
+        for line in text.splitlines():
+            print '{}{}: {}'.format('    ' * indent, prefix, line)
+        print
 
 
 def man_days(timedelta):
@@ -259,8 +279,10 @@ if __name__ == '__main__':
                         help="group by day")
     parser.add_argument('-w', '--weeks', dest='weeks', action='store_true',
                         help="group by work week")
-    parser.add_argument('-v', '--verbose', dest='verbose', action='store_true',
-                        help="show verbose output in summary")
+    parser.add_argument('-n', '--notes', dest='notes', action='store_true',
+                        help="show notes output in summary")
+    parser.add_argument('-r', '--repo',
+                        help="show commits to repo")
     parser.add_argument('--afk', dest='afk', action='store_true',
                         help="include time spent AFK")
     args = parser.parse_args()
