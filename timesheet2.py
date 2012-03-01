@@ -1,101 +1,152 @@
-"""Timesheet parsing functional stylee!"""
+import os
 import re
-import sys
-from collections import OrderedDict, defaultdict
+from collections import OrderedDict, defaultdict, namedtuple
 from datetime import datetime, timedelta
 from operator import itemgetter
-from pprint import pprint
 
-TRUNC_DATE = (
-    ('all', lambda d: None, ""),
-    ('year', lambda d: datetime(d.year, 1, 1), "%Y"),
-    ('month', lambda d: datetime(d.year, d.month, 1), "%b %Y"),
-    ('day', lambda d: datetime(d.year, d.month, d.day), "%a %b %d, %Y")
-)
+# TODO git integration
+# TODO bug tracker integration
+# TODO command line options for which grouping to show
 
-START = datetime(2012, 2, 27)
-
-
-def parse(file):
-    weekly = re.compile(
-        r"""
+SLOT_REGEXP = re.compile(
+    r"""
     (Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)?\s*
     (\d{4})\ ?(.*?)\n
     (.*?)
     (?=(\d{4})|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)
     """, re.DOTALL | re.X)
-    return re.finditer(weekly, file.read())
+AFK = ['afk', 'tea', 'lunch']
+TRUNC_DATE = (
+    ('all', lambda d: None, ""),
+    ('year', lambda d: datetime(d.year, 1, 1), "%Y"),
+    ('month', lambda d: datetime(d.year, d.month, 1), "%b %Y"),
+    # TODO ('week', lambda d: datetime(????), "%U %Y"),
+    ('day', lambda d: datetime(d.year, d.month, d.day), "%a %b %d, %Y")
+)
+MAN_DAY = 7.5  # hours
+
+Slot = namedtuple('Slot', "day start end task note")
 
 
-def minutes(time):
-    return int(time[:2]) * 60 + int(time[2:])
+def parse_file(file):
+    start_date = datetime.strptime(
+        os.path.basename(file.name), "%Y%m%d.txt")
+    # TODO can I avoid file.read() -- finditer doesn't like file objects?
+    return parse(file.read(), start_date)
 
 
-def to_datetime(day, time):
-    return day + timedelta(seconds=minutes(time) * 60)
+def parse(string, start_date):
+    return validate(convert_to_datetime(raw_parse(string), start_date))
 
 
-def duration(slots):
-    global START
-    for m in slots:
-        day, start, task, note, end = m.groups()
-        if day:
-            START += timedelta(days=1)
+def raw_parse(string):
+    for m in re.finditer(SLOT_REGEXP, string):
+        yield m.groups()
+
+
+def convert_to_datetime(slots, start_date):
+    """
+    Convert day and start and end times to datetime objects.
+    """
+    for day, start, task, note, end in slots:
+        if day and day != "Monday":
+            start_date += timedelta(days=1)
         if end:  # TODO fix regexp to not grab end of day as a task!
-            start = to_datetime(START, start)
-            end = to_datetime(START, end)
-            yield START, start, task, note, end, end - start
+            yield Slot(start_date,
+                       start_date + to_timedelta(start),
+                       start_date + to_timedelta(end),
+                       task,
+                       note,
+                       )
 
 
-def task(task, slots):
+def validate(slots):
+    # TODO some validation!!
     for slot in slots:
-        if slot[2] == task:
+        if slot.task.lower() not in AFK:
             yield slot
-
-
-def total(slots):
-    return sum((s[-1] for s in slots))
-
-
-def man_days(delta):
-    minutes = delta.seconds / 60
-    days, minutes = divmod(minutes, 7.5 * 60)
-    hours, minutes = divmod(minutes, 60)
-    out = []
-    for measure, amount in zip(("day", "hour", "minute"),
-                               (days, hours, minutes)):
-        if amount:
-            out.append(
-                "{:.0f} {}{}".format(amount, measure, "s" if amount > 1 else ""))
-    return ", ".join(out)
-
-
-def summarize(slots):
-    totals = defaultdict(lambda: timedelta(0))
-    for day, start, task, note, end, duration in slots:
-        totals[task] += duration
-    for task, total in sorted(totals.items(), key=itemgetter(1)):
-        print "{:20s} {}".format(task, man_days(total))
 
 
 def group(slots):
     groups = {}
     for slot in slots:
-        for group, func, fmt in TRUNC_DATE:
-            groups.setdefault(
-                group, OrderedDict()
-                ).setdefault(func(slot[0]), []).append(slot)
-    for group, func, fmt in TRUNC_DATE:
-        for date, slots in groups[group].items():
+        for time_period, date_trunc_func, time_period_format in TRUNC_DATE:
+            (groups
+             .setdefault(time_period, OrderedDict())
+             .setdefault(date_trunc_func(slot.day), [])
+             .append(slot))
+    return groups
+
+
+def show_groups(groups):
+    for time_period, date_trunc_func, time_period_format in TRUNC_DATE:
+        for date, slots in groups[time_period].items():
             print
             if date:
-                print date.strftime(fmt)
+                print date.strftime(time_period_format)
             else:
                 print 'All'
             summarize(slots)
 
 
-#pprint(list(task('reporting', duration(parse(open(sys.argv[1]))))))
-#summarize(duration(parse(open(sys.argv[1]))))
-group(duration(parse(open(sys.argv[1]))))
-#print man_days(total(task(sys.argv[2], duration(parse(open(sys.argv[1]))))))
+def summarize(slots):
+    totals = defaultdict(lambda: timedelta(0))
+    overall = timedelta(0)
+    for slot in slots:
+        duration = slot.end - slot.start
+        totals[slot.task] += duration
+        overall += duration
+    for task, total in sorted(totals.items(), key=itemgetter(1)):
+        print "{:20s} {}".format(task, man_days(total))
+    print "{:20s} {}".format("OVERALL", man_days(overall))
+
+
+def minutes(time_string):
+    """Convert a string in HHMM format to a number of minutes.
+
+    >>> minutes("1341")
+    821
+    """
+    return int(time_string[:2]) * 60 + int(time_string[2:])
+
+
+def to_timedelta(time_string):
+    """Convert a string in HHMM format to a timedelta.
+
+    >>> to_timedelta("0832")
+    datetime.timedelta(0, 30720)
+    """
+    return timedelta(seconds=minutes(time_string) * 60)
+
+
+def man_days(delta):
+    """
+    Return ``timedelta`` in human readable man days.
+
+    >>> t = timedelta(seconds=(3 * 7.5 * 3600) + (3 * 3600) + 1210)
+    >>> man_days(t)
+    '3 days, 3 hours, 20 minutes'
+
+    >>> t = timedelta(seconds=3625)
+    >>> man_days(t)
+    '1 hour'
+
+    >>> t = timedelta(seconds=484)
+    >>> man_days(t)
+    '8 minutes'
+
+    """
+    minutes = (delta.days * 24 * 3600 + delta.seconds) / 60
+    days, minutes = divmod(minutes, MAN_DAY * 60)
+    hours, minutes = divmod(minutes, 60)
+    out = []
+    for measure, amount in zip(("day", "hour", "minute"),
+                               (days, hours, minutes)):
+        if amount:
+            out.append("{:.0f} {}{}".format(
+                    amount, measure, "s" if amount > 1 else ""))
+    return ", ".join(out)
+
+if __name__ == '__main__':
+    import sys
+    show_groups(group(parse_file(open(sys.argv[1]))))
