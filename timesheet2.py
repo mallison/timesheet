@@ -72,6 +72,8 @@ def validate(slots):
     # TODO some validation!!
     for slot in slots:
         if slot.task.lower() not in AFK:
+            if slot.task == '':
+                slot = Slot(slot.start, slot.end, "misc", slot.note)
             yield slot
 
 
