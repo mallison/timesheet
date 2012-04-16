@@ -13,7 +13,7 @@ SLOT_REGEXP = re.compile(
     (Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)?\s*
     (\d{4})\ ?(.*?)\n
     (.*?)
-    (?=(\d{4})|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)
+    (?=\n(\d{4})|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)
     """, re.DOTALL | re.X)
 AFK = ['afk', 'tea', 'lunch']
 TRUNC_DATE = (
