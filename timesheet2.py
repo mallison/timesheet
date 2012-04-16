@@ -31,7 +31,7 @@ Slot = namedtuple('Slot', "day start end task note")
 
 def parse_file(file):
     start_date = datetime.strptime(
-        os.path.basename(file.name), "%Y%m%d.txt")
+        os.path.splitext(os.path.basename(file.name))[0], "%Y%m%d")
     # TODO can I avoid file.read() -- finditer doesn't like file objects?
     timesheet = remove_notes(file.read())
     return parse(timesheet, start_date)
