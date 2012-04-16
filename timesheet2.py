@@ -24,6 +24,7 @@ TRUNC_DATE = (
     ('day', lambda d: datetime(d.year, d.month, d.day), "%a %b %d, %Y")
 )
 MAN_DAY = 7.5  # hours
+NOTES_DELIMITER = '-' * 50
 
 Slot = namedtuple('Slot', "day start end task note")
 
@@ -32,7 +33,14 @@ def parse_file(file):
     start_date = datetime.strptime(
         os.path.basename(file.name), "%Y%m%d.txt")
     # TODO can I avoid file.read() -- finditer doesn't like file objects?
-    return parse(file.read(), start_date)
+    timesheet = remove_notes(file.read())
+    return parse(timesheet, start_date)
+
+
+def remove_notes(content):
+    if NOTES_DELIMITER in content:
+        return content.split(NOTES_DELIMITER)[0]
+    return content
 
 
 def parse(string, start_date):
