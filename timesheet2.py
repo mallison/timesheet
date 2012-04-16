@@ -106,8 +106,13 @@ def summarize(slots):
         duration = slot.end - slot.start
         totals[slot.task] += duration
         overall += duration
+    most = max([t[1] for t in totals.items()])
     for task, total in sorted(totals.items(), key=itemgetter(1)):
-        print "{:20s} {}".format(task, man_days(total))
+        print "{:20s} {:30s} {}".format(
+            task,
+            man_days(total),
+            "+" * int(30 * total.total_seconds() / most.total_seconds())
+            )
     print "{:20s} {}".format("OVERALL", man_days(overall))
 
 
