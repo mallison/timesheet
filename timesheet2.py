@@ -1,12 +1,14 @@
+import argparse
+import itertools
 import os
 import re
-from collections import OrderedDict, defaultdict, namedtuple
+from collections import defaultdict, namedtuple
 from datetime import datetime, timedelta
 from operator import itemgetter
 
 # TODO git integration
 # TODO bug tracker integration
-# TODO command line options for which grouping to show
+# TODO change TRUNC_DATE to a dict and remove 'urgh' occurences!
 
 SLOT_REGEXP = re.compile(
     r"""
@@ -17,7 +19,6 @@ SLOT_REGEXP = re.compile(
     """, re.DOTALL | re.X)
 AFK = ['afk', 'tea', 'lunch']
 TRUNC_DATE = (
-    ('all', lambda d: None, ""),
     ('year', lambda d: datetime(d.year, 1, 1), "%Y"),
     ('month', lambda d: datetime(d.year, d.month, 1), "%b %Y"),
     # TODO ('week', lambda d: datetime(????), "%U %Y"),
@@ -26,7 +27,7 @@ TRUNC_DATE = (
 MAN_DAY = 7.5  # hours
 NOTES_DELIMITER = '-' * 50
 
-Slot = namedtuple('Slot', "day start end task note")
+Slot = namedtuple('Slot', "start end task note")
 
 
 def parse_file(file):
@@ -54,14 +55,13 @@ def raw_parse(string):
 
 def convert_to_datetime(slots, start_date):
     """
-    Convert day and start and end times to datetime objects.
+    Convert start and end times to datetime objects.
     """
     for day, start, task, note, end in slots:
         if day and day != "Monday":
             start_date += timedelta(days=1)
         if end:  # TODO fix regexp to not grab end of day as a task!
-            yield Slot(start_date,
-                       start_date + to_timedelta(start),
+            yield Slot(start_date + to_timedelta(start),
                        start_date + to_timedelta(end),
                        task,
                        note,
@@ -71,31 +71,35 @@ def convert_to_datetime(slots, start_date):
 def validate(slots):
     # TODO some validation!!
     for slot in slots:
-        if slot.task.lower() not in AFK:
+        if slot.task.lower() not in AFK:  # TODO make afk filter optional
             if slot.task == '':
                 slot = Slot(slot.start, slot.end, "misc", slot.note)
             yield slot
 
 
-def group(slots):
-    groups = {}
-    for slot in slots:
-        for time_period, date_trunc_func, time_period_format in TRUNC_DATE:
-            (groups
-             .setdefault(time_period, OrderedDict())
-             .setdefault(date_trunc_func(slot.day), [])
-             .append(slot))
-    return groups
+def group(slots, resolution):
+    """Group slots by year, month, day.
+
+    Returns a mapping of the form:
+
+    grouped[<datetime>] = [<slot>, <slot>, ...]
+
+    """
+    urgh = dict((t[:2] for t in TRUNC_DATE))[resolution]
+    return itertools.groupby(slots, lambda x: urgh(x.start))
 
 
-def show_groups(groups):
-    for time_period, date_trunc_func, time_period_format in TRUNC_DATE:
-        for date, slots in groups[time_period].items():
+def show_groups(slots, resolutions=None):
+    for resolution in resolutions or [None]:
+        if resolution is not None:
+            grouped = group(slots, resolution)
+            urgh = dict(((t[0], t[2]) for t in TRUNC_DATE))[resolution]
+        else:
+            grouped = ('All', slots),
+            urgh = None
+        for date, slots in grouped:
             print
-            if date:
-                print date.strftime(time_period_format)
-            else:
-                print 'All'
+            print urgh and date.strftime(urgh) or date
             summarize(slots)
 
 
@@ -108,10 +112,10 @@ def summarize(slots):
         overall += duration
     most = max([t[1] for t in totals.items()])
     for task, total in sorted(totals.items(), key=itemgetter(1)):
-        print "{:20s} {:30s} {}".format(
+        print "{:20s} {:15s} {}".format(
             task,
             man_days(total),
-            "+" * int(30 * total.total_seconds() / most.total_seconds())
+            "#" * int(50 * total.total_seconds() / most.total_seconds())
             )
     print "{:20s} {}".format("OVERALL", man_days(overall))
 
@@ -155,13 +159,44 @@ def man_days(delta):
     days, minutes = divmod(minutes, MAN_DAY * 60)
     hours, minutes = divmod(minutes, 60)
     out = []
-    for measure, amount in zip(("day", "hour", "minute"),
+    for measure, amount in zip(("d", "h", "m"),
                                (days, hours, minutes)):
         if amount:
-            out.append("{:.0f} {}{}".format(
-                    amount, measure, "s" if amount > 1 else ""))
-    return ", ".join(out)
+            out.append("{:.0f}{}".format(amount, measure))
+    return " ".join(out)
+
+
+def since(slots):
+    return (s for s in slots if not args.since or s.start >= args.since)
+
+
+def date_type(date_arg):
+    return datetime.strptime(date_arg, "%Y-%m-%d")
+
+
+def main():
+    slots = []
+    for path in args.timesheet:
+        with open(path) as f:
+            slots.extend(parse_file(f))
+    show_groups(since(slots), args.resolution)
+
 
 if __name__ == '__main__':
-    import sys
-    show_groups(group(parse_file(open(sys.argv[1]))))
+    parser = argparse.ArgumentParser(description='Process a time sheet.')
+    parser.add_argument('timesheet',
+                        nargs='+',
+                        help='path to time sheet file')
+    parser.add_argument('-r', '--resolution',
+                        nargs='*',
+                        choices=[t[0] for t in TRUNC_DATE],
+                        )
+    parser.add_argument('--since', type=date_type)
+    # parser.add_argument('-n', '--notes', dest='notes', action='store_true',
+    #                     help="show notes output in summary")
+    # parser.add_argument('-r', '--repo',
+    #                     help="show commits to repo")
+    # parser.add_argument('--afk', dest='afk', action='store_true',
+    #                     help="include time spent AFK")
+    args = parser.parse_args()
+    main()
