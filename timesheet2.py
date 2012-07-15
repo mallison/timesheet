@@ -2,6 +2,7 @@ import argparse
 import itertools
 import os
 import re
+import sys
 from collections import defaultdict, namedtuple
 from datetime import datetime, timedelta
 from operator import itemgetter
@@ -70,7 +71,22 @@ def convert_to_datetime(slots, start_date):
 
 def validate(slots):
     # TODO some validation!!
+    prev_slot = None
+    day_start_slot = None
     for slot in slots:
+        if not slot.end > slot.start:
+            print >>sys.stderr, "invalid"
+        if prev_slot == None:
+            prev_slot = day_start_slot = slot
+        if slot.start.day != prev_slot.start.day:
+            if not (slot.start.day == prev_slot.start.day + 1):  # TODO not correct!
+                print >>sys.stderr, "days out of sequence"
+                print >>sys.stderr, (prev_slot, slot)
+            length_of_day = prev_slot.end - day_start_slot.start
+            if length_of_day < timedelta(hours=8):  # TODO doesn't account for AFK!
+                print >>sys.stderr, "short day %s" % (prev_slot,)
+            day_start_slot = slot
+        prev_slot = slot
         if slot.task.lower() not in AFK:  # TODO make afk filter optional
             if slot.task == '':
                 slot = Slot(slot.start, slot.end, "misc", slot.note)
