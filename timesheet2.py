@@ -1,13 +1,13 @@
 import argparse
 import itertools
 import os
+import pickle
 import re
 import sys
 from collections import defaultdict, namedtuple
 from datetime import datetime, timedelta
 from operator import itemgetter
 
-# TODO git integration
 # TODO bug tracker integration
 # TODO change TRUNC_DATE to a dict and remove 'urgh' occurences!
 
@@ -27,6 +27,7 @@ TRUNC_DATE = (
 )
 MAN_DAY = 7.5  # hours
 NOTES_DELIMITER = '-' * 50
+COMMIT_LOG = os.path.expanduser('~/.gitlog')
 
 Slot = namedtuple('Slot', "start end task note")
 
@@ -122,6 +123,7 @@ def show_groups(slots, resolutions=None):
 def summarize(slots):
     totals = defaultdict(lambda: timedelta(0))
     overall = timedelta(0)
+    slots = list(slots)  # TODO trying to avoid this!
     for slot in slots:
         duration = slot.end - slot.start
         totals[slot.task] += duration
@@ -129,11 +131,23 @@ def summarize(slots):
     most = max([t[1] for t in totals.items()])
     for task, total in sorted(totals.items(), key=itemgetter(1)):
         print "{:20s} {:15s} {}".format(
-            task,
+            task[:20],
             man_days(total),
             "#" * int(50 * total.total_seconds() / most.total_seconds())
             )
+        if args.commits:
+            for slot in slots:
+                if slot.task == task:
+                    print_commits(slot)
+            print
     print "{:20s} {}".format("OVERALL", man_days(overall))
+
+
+def print_commits(slot):
+    commits = [c for c in COMMITS if slot.start <= c[0] < slot.end]
+    for time, msg in commits:
+        msg = re.sub(r'^#.*$', '', msg, flags=re.M).strip()
+        print "    {0:%H%M} {1:}".format(time, msg)
 
 
 def minutes(time_string):
@@ -210,6 +224,8 @@ def _get_default_timesheet():
 
 
 if __name__ == '__main__':
+    with open(COMMIT_LOG) as f:
+        COMMITS = pickle.load(f)
     parser = argparse.ArgumentParser(description='Process a time sheet.')
     parser.add_argument('timesheet',
                         nargs='*',
@@ -221,8 +237,8 @@ if __name__ == '__main__':
     parser.add_argument('--since', type=date_type)
     # parser.add_argument('-n', '--notes', dest='notes', action='store_true',
     #                     help="show notes output in summary")
-    # parser.add_argument('-r', '--repo',
-    #                     help="show commits to repo")
+    parser.add_argument('-c', '--commits', action='store_true',
+                        help="show commits to repo")
     # parser.add_argument('--afk', dest='afk', action='store_true',
     #                     help="include time spent AFK")
     args = parser.parse_args()
