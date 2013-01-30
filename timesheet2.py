@@ -192,16 +192,27 @@ def date_type(date_arg):
 
 def main():
     slots = []
-    for path in args.timesheet:
+    if args.timesheet:
+        timesheets = args.timesheet
+    else:
+        timesheets = [_get_default_timesheet()]
+    for path in timesheets:
         with open(path) as f:
             slots.extend(parse_file(f))
     show_groups(since(slots), args.resolution)
 
 
+def _get_default_timesheet():
+    today = datetime.today()
+    delta = today.weekday()
+    return '/home/mark/bb/weekly/{:%Y%m%d}.org'.format(
+        today - timedelta(days=delta))
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Process a time sheet.')
     parser.add_argument('timesheet',
-                        nargs='+',
+                        nargs='*',
                         help='path to time sheet file')
     parser.add_argument('-r', '--resolution',
                         nargs='*',
