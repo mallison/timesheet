@@ -71,27 +71,38 @@ def convert_to_datetime(slots, start_date):
 
 
 def validate(slots):
-    # TODO some validation!!
     prev_slot = None
-    day_start_slot = None
+    current_days_slots = []
+
     for slot in slots:
-        if not slot.end > slot.start:
-            print >>sys.stderr, "invalid"
-        if prev_slot == None:
-            prev_slot = day_start_slot = slot
-        if slot.start.day != prev_slot.start.day:
-            if not (slot.start.day == prev_slot.start.day + 1):  # TODO not correct!
-                print >>sys.stderr, "days out of sequence"
-                print >>sys.stderr, (prev_slot, slot)
-            length_of_day = prev_slot.end - day_start_slot.start
-            if length_of_day < timedelta(hours=8):  # TODO doesn't account for AFK!
-                print >>sys.stderr, "short day %s" % (prev_slot,)
-            day_start_slot = slot
+        if slot.end < slot.start:
+            print >>sys.stderr, "incorrect end time for slot"
+
+        if prev_slot:
+            if slot_not_in_current_day(prev_slot, slot):
+                if not current_day_follows_previous(prev_slot, slot):
+                    print >>sys.stderr, "days out of sequence: %s -> %s" % (prev_slot.start, slot.start)
+                length_of_day = sum((s.end - s.start for s in current_days_slots if s.task.lower() not in AFK), timedelta(0))
+                if length_of_day < timedelta(hours=MAN_DAY):
+                    print >>sys.stderr, "short day %s %s" % (length_of_day, current_days_slots[-1].end - current_days_slots[0].start)
+                current_days_slots = []
+
+        current_days_slots.append(slot)
         prev_slot = slot
+
         if slot.task.lower() not in AFK:  # TODO make afk filter optional
             if slot.task == '':
                 slot = Slot(slot.start, slot.end, "misc", slot.note)
             yield slot
+
+
+def slot_not_in_current_day(previous_slot, current_slot):
+    return current_slot.start.day != previous_slot.start.day
+
+
+def current_day_follows_previous(previous_slot, current_slot):
+    return previous_slot.start.toordinal() + 1 == current_slot.start.toordinal()
+
 
 
 def group(slots, resolution):
