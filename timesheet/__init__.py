@@ -2,8 +2,6 @@ import argparse
 import itertools
 import os
 import pickle
-import re
-import sys
 from collections import defaultdict, namedtuple
 from datetime import datetime, timedelta
 from operator import itemgetter
@@ -11,13 +9,6 @@ from operator import itemgetter
 # TODO bug tracker integration
 # TODO change TRUNC_DATE to a dict and remove 'urgh' occurences!
 
-SLOT_REGEXP = re.compile(
-    r"""
-    (Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)?\s*
-    (\d{4})\ ?(.*?)\n
-    (.*?)
-    (?=\n(\d{4})|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)
-    """, re.DOTALL | re.X)
 AFK = ['afk', 'tea', 'lunch']
 TRUNC_DATE = (
     ('year', lambda d: datetime(d.year, 1, 1), "%Y"),
@@ -26,87 +17,17 @@ TRUNC_DATE = (
     ('day', lambda d: datetime(d.year, d.month, d.day), "%a %b %d, %Y")
 )
 MAN_DAY = 7.5  # hours
-NOTES_DELIMITER = '-' * 50
 COMMIT_LOG = os.path.expanduser('~/.gitlog')
 
 Slot = namedtuple('Slot', "start end task note")
 
+import parse
+import utils
+
 
 def parse_file(file):
-    start_date = datetime.strptime(
-        os.path.splitext(os.path.basename(file.name))[0], "%Y%m%d")
-    # TODO can I avoid file.read() -- finditer doesn't like file objects?
-    timesheet = remove_notes(file.read())
-    return parse(timesheet, start_date)
-
-
-def remove_notes(content):
-    if NOTES_DELIMITER in content:
-        return content.split(NOTES_DELIMITER)[0]
-    return content
-
-
-def parse(string, start_date):
-    return validate(convert_to_datetime(raw_parse(string), start_date))
-
-
-def raw_parse(string):
-    for m in re.finditer(SLOT_REGEXP, string):
-        yield m.groups()
-
-
-def convert_to_datetime(slots, start_date):
-    """
-    Convert start and end times to datetime objects.
-    """
-    for day, start, task, note, end in slots:
-        if day and day != "Monday":
-            start_date += timedelta(days=1)
-        if end:  # TODO fix regexp to not grab end of day as a task!
-            yield Slot(start_date + to_timedelta(start),
-                       start_date + to_timedelta(end),
-                       split_hierarchical_tasks(task),
-                       note,
-                       )
-
-
-def split_hierarchical_tasks(task):
-    return tuple((t.strip() for t in task.split(':')))
-
-
-def validate(slots):
-    prev_slot = None
-    current_days_slots = []
-
-    for slot in slots:
-        if slot.end < slot.start:
-            print >>sys.stderr, "incorrect end time for slot"
-
-        if prev_slot:
-            if slot_not_in_current_day(prev_slot, slot):
-                if not current_day_follows_previous(prev_slot, slot):
-                    print >>sys.stderr, "days out of sequence: %s -> %s" % (prev_slot.start, slot.start)
-                length_of_day = sum((s.end - s.start for s in current_days_slots if s.task[0].lower() not in AFK), timedelta(0))
-                if length_of_day < timedelta(hours=MAN_DAY):
-                    print >>sys.stderr, "short day %s %s" % (length_of_day, current_days_slots[-1].end - current_days_slots[0].start)
-                current_days_slots = []
-
-        current_days_slots.append(slot)
-        prev_slot = slot
-
-        if slot.task[0].lower() not in AFK:  # TODO make afk filter optional
-            if slot.task[0] == '':
-                slot = Slot(slot.start, slot.end, ("misc",), slot.note)
-            yield slot
-
-
-def slot_not_in_current_day(previous_slot, current_slot):
-    return current_slot.start.day != previous_slot.start.day
-
-
-def current_day_follows_previous(previous_slot, current_slot):
-    return previous_slot.start.toordinal() + 1 == current_slot.start.toordinal()
-
+    start_date = utils.start_date_from_file_name(file.name)
+    return parse.parse(file, start_date)
 
 
 def group(slots, resolution):
@@ -140,9 +61,10 @@ def summarize(slots):
     overall = timedelta(0)
     slots = list(slots)  # TODO trying to avoid this!
     for slot in slots:
-        duration = slot.end - slot.start
-        totals[slot.task[:args.level]] += duration
-        overall += duration
+        if slot.task[0] not in AFK:
+            duration = slot.end - slot.start
+            totals[slot.task[:args.level]] += duration
+            overall += duration
     most = max([t[1] for t in totals.items()])
     for task, total in sorted(totals.items(), key=itemgetter(1)):
         print "{:30s} {:15s} {}".format(
