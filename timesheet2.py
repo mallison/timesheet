@@ -65,9 +65,13 @@ def convert_to_datetime(slots, start_date):
         if end:  # TODO fix regexp to not grab end of day as a task!
             yield Slot(start_date + to_timedelta(start),
                        start_date + to_timedelta(end),
-                       task,
+                       split_hierarchical_tasks(task),
                        note,
                        )
+
+
+def split_hierarchical_tasks(task):
+    return tuple((t.strip() for t in task.split(':')))
 
 
 def validate(slots):
@@ -82,7 +86,7 @@ def validate(slots):
             if slot_not_in_current_day(prev_slot, slot):
                 if not current_day_follows_previous(prev_slot, slot):
                     print >>sys.stderr, "days out of sequence: %s -> %s" % (prev_slot.start, slot.start)
-                length_of_day = sum((s.end - s.start for s in current_days_slots if s.task.lower() not in AFK), timedelta(0))
+                length_of_day = sum((s.end - s.start for s in current_days_slots if s.task[0].lower() not in AFK), timedelta(0))
                 if length_of_day < timedelta(hours=MAN_DAY):
                     print >>sys.stderr, "short day %s %s" % (length_of_day, current_days_slots[-1].end - current_days_slots[0].start)
                 current_days_slots = []
@@ -90,9 +94,9 @@ def validate(slots):
         current_days_slots.append(slot)
         prev_slot = slot
 
-        if slot.task.lower() not in AFK:  # TODO make afk filter optional
-            if slot.task == '':
-                slot = Slot(slot.start, slot.end, "misc", slot.note)
+        if slot.task[0].lower() not in AFK:  # TODO make afk filter optional
+            if slot.task[0] == '':
+                slot = Slot(slot.start, slot.end, ("misc",), slot.note)
             yield slot
 
 
@@ -137,12 +141,12 @@ def summarize(slots):
     slots = list(slots)  # TODO trying to avoid this!
     for slot in slots:
         duration = slot.end - slot.start
-        totals[slot.task] += duration
+        totals[slot.task[:args.level]] += duration
         overall += duration
     most = max([t[1] for t in totals.items()])
     for task, total in sorted(totals.items(), key=itemgetter(1)):
-        print "{:20s} {:15s} {}".format(
-            task[:20],
+        print "{:30s} {:15s} {}".format(
+            ': '.join(task)[:30],
             man_days(total),
             "#" * int(50 * total.total_seconds() / most.total_seconds())
             )
@@ -151,7 +155,7 @@ def summarize(slots):
                 if slot.task == task:
                     print_commits(slot)
             print
-    print "{:20s} {}".format("OVERALL", man_days(overall))
+    print "{:30s} {}".format("OVERALL", man_days(overall))
 
 
 def print_commits(slot):
@@ -245,6 +249,7 @@ if __name__ == '__main__':
                         nargs='*',
                         choices=[t[0] for t in TRUNC_DATE],
                         )
+    parser.add_argument('-l', '--level', type=int, default=1)
     parser.add_argument('--since', type=date_type)
     # parser.add_argument('-n', '--notes', dest='notes', action='store_true',
     #                     help="show notes output in summary")
