@@ -1,4 +1,6 @@
 import itertools
+import os
+import pickle
 import re
 from collections import defaultdict
 from datetime import datetime, timedelta
@@ -16,6 +18,7 @@ DATE_FORMAT = {
     'month': "%b %Y",
     'day': "%a %b %d, %Y",
 }
+COMMIT_LOG = os.path.expanduser('~/.gitlog')
 
 
 def group_slots_by_time_period(slots, resolution):
@@ -47,6 +50,7 @@ def show_groups(slots, resolutions=None, task_level=1, show_commits=False):
 def summarize(slots, task_level=1, show_commits=False):
     totals = defaultdict(lambda: timedelta(0))
     overall = timedelta(0)
+    slots = list(slots)
     for slot in slots:
         if slot.task[0] not in AFK:
             duration = slot.end - slot.start
@@ -61,14 +65,19 @@ def summarize(slots, task_level=1, show_commits=False):
             )
         if show_commits:
             for slot in slots:
-                if slot.task == task:
+                if slot.task[:task_level] == task:
                     print_commits(slot)
             print
     print "{:30s} {}".format("OVERALL", man_days(overall))
 
 
+_commits = None
 def print_commits(slot):
-    commits = [c for c in COMMITS if slot.start <= c[0] < slot.end]
+    global _commits
+    if _commits is None:
+        with open(COMMIT_LOG) as f:
+            _commits = pickle.load(f)
+    commits = [c for c in _commits if slot.start <= c[0] < slot.end]
     for time, msg in commits:
         msg = re.sub(r'^#.*$', '', msg, flags=re.M).strip()
         print "    {0:%H%M} {1:}".format(time, msg)

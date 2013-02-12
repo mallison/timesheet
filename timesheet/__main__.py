@@ -1,6 +1,4 @@
 import argparse
-import pickle
-import os
 from datetime import datetime, timedelta
 
 import parse
@@ -8,12 +6,11 @@ import report
 import utils
 
 # TODO bug tracker integration
-COMMIT_LOG = os.path.expanduser('~/.gitlog')
 
 
 def main():
     slots = parse_files()
-    report.show_groups(since(slots),
+    report.show_groups(list(since(slots)),
                        resolutions=args.resolution,
                        task_level=args.level,
                        show_commits=args.commits)
@@ -61,8 +58,6 @@ def date_type(date_arg):
     return datetime.strptime(date_arg, "%Y-%m-%d")
 
 
-with open(COMMIT_LOG) as f:
-    COMMITS = pickle.load(f)
 parser = argparse.ArgumentParser(description='Process a time sheet.')
 parser.add_argument('timesheet',
                     nargs='*',
