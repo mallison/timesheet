@@ -69,7 +69,7 @@ parser.add_argument('timesheet',
                     help='path to time sheet file')
 parser.add_argument('-r', '--resolution',
                     nargs='*',
-                    choices=[t[0] for t in report.DATE_FORMAT],
+                    choices=report.DATE_FORMAT,
                     )
 parser.add_argument('-l', '--level', type=int, default=1)
 parser.add_argument('--since', type=date_type)
