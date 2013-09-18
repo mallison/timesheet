@@ -1,13 +1,13 @@
 import re
 from datetime import datetime, timedelta
 
-class Timesheet(object):
+class Timesheet(list):
     days = [datetime(2013, 9, d).strftime('%A') for d in range(16, 23)]
     timestamp_regexp = re.compile(r'^(\d{4})(?:\s+(.*))?$')
 
     def __init__(self, file_like):
+        super(Timesheet, self).__init__()
         self.when = datetime(2013, 9, 18)
-        self._chunks = []
         self._parse(file_like)
 
     def _parse(self, f):
@@ -45,19 +45,19 @@ class Timesheet(object):
 
     def _new_chunk(self, time, task):
         time = self.when + timedelta(hours=int(time[:2]), minutes=int(time[2:]))
-        if len(self._chunks):
-            self._chunks[-1]['end'] = time
-        self._chunks.append(dict(task=task, start=time))
+        if len(self):
+            self[-1]['end'] = time
+        self.append(dict(task=task, start=time))
 
     def _close_last_chunk(self):
-        if len(self._chunks) > 1:
-            close_time = self._chunks[-1]['start']
-            del self._chunks[-1]
-            self._chunks[-1]['end'] = close_time
+        if len(self) > 1:
+            close_time = self[-1]['start']
+            del self[-1]
+            self[-1]['end'] = close_time
 
 
 if __name__ == '__main__':
     import sys
     from pprint import pprint
     timesheet = Timesheet(open(sys.argv[1]))
-    pprint(timesheet._chunks)
+    pprint(timesheet)
