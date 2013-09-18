@@ -8,9 +8,9 @@ class Timesheet(list):
     days = [datetime(2013, 9, d).strftime('%A') for d in range(16, 23)]
     timestamp_regexp = re.compile(r'^(\d{4})(?:\s+(.*))?$')
 
-    def __init__(self, file_like):
+    def __init__(self, start_time, file_like):
         super(Timesheet, self).__init__()
-        self.when = datetime(2013, 9, 18)
+        self.when = start_time
         self._parse(file_like)
 
     def _parse(self, f):
