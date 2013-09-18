@@ -1,5 +1,8 @@
 import re
+import sys
 from datetime import datetime, timedelta
+from pprint import pprint
+
 
 class Timesheet(list):
     days = [datetime(2013, 9, d).strftime('%A') for d in range(16, 23)]
@@ -56,8 +59,17 @@ class Timesheet(list):
             self[-1]['end'] = close_time
 
 
-if __name__ == '__main__':
-    import sys
-    from pprint import pprint
-    timesheet = Timesheet(open(sys.argv[1]))
+def read_files(paths):
+    timesheet = None
+    for path in paths:
+        with open(path) as f:
+            new_timesheet = Timesheet(f)
+            if timesheet is None:
+                timesheet = new_timesheet
+            else:
+                timesheet.extend(new_timesheet)
     pprint(timesheet)
+
+
+if __name__ == '__main__':
+    read_files(sys.argv[1:])
