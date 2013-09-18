@@ -1,3 +1,4 @@
+import os
 import re
 import sys
 from datetime import datetime, timedelta
@@ -63,13 +64,20 @@ def read_files(paths):
     timesheet = None
     for path in paths:
         with open(path) as f:
-            new_timesheet = Timesheet(f)
+            new_timesheet = Timesheet(_datetime_from_filename(path), f)
             if timesheet is None:
                 timesheet = new_timesheet
             else:
                 timesheet.extend(new_timesheet)
     pprint(timesheet)
 
+
+def _datetime_from_filename(path):
+    filename = os.path.basename(path)
+    return datetime(int(filename[:4]),
+                    int(filename[4:6]),
+                    int(filename[6:8]))
+                    
 
 if __name__ == '__main__':
     read_files(sys.argv[1:])
