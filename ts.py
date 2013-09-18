@@ -1,4 +1,3 @@
-# AGAIN!?, REALLY!?
 import re
 from datetime import datetime, timedelta
 
