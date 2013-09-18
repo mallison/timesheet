@@ -6,7 +6,7 @@ from collections import defaultdict
 from datetime import datetime, timedelta
 from operator import itemgetter
 
-MAN_DAY = 7.5  # hours
+MAN_DAY = 7.0  # hours
 AFK = ['afk', 'tea', 'lunch']
 TRUNCATE_DATE = {
     'year': lambda d: datetime(d.year, 1, 1),
@@ -43,6 +43,7 @@ def show_groups(slots, resolutions=None, task_level=1, show_commits=False):
             grouped = ('All', slots),
         for date, slots in grouped:
             print
+            print '-' * 72
             print date_format and date.strftime(date_format) or date
             summarize(slots, task_level=task_level, show_commits=show_commits)
 
@@ -101,11 +102,11 @@ def man_days(delta):
 
     """
     minutes = (delta.days * 24 * 3600 + delta.seconds) / 60
-    days, minutes = divmod(minutes, MAN_DAY * 60)
+    # days, minutes = divmod(minutes, MAN_DAY * 60)
     hours, minutes = divmod(minutes, 60)
     out = []
-    for measure, amount in zip(("d", "h", "m"),
-                               (days, hours, minutes)):
+    for measure, amount in zip(("h", "m"),
+                               (hours, minutes)):
         if amount:
             out.append("{:.0f}{}".format(amount, measure))
     return " ".join(out)

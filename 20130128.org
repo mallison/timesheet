@@ -1,0 +1,16 @@
+Monday
+0900 stuff:ting
+
+1000 stuff:misc
+
+1300 stuff:ting
+
+1500 stuff:email
+
+1700 wobble
+
+1800
+
+
+--------------------------------------------------
+ignore this stuff!!!

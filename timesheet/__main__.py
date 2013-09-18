@@ -50,7 +50,7 @@ def since(slots):
 def _get_default_timesheet():
     today = datetime.today()
     delta = today.weekday()
-    return '/home/mark/bb/weekly/{:%Y%m%d}.org'.format(
+    return '/Users/mark/Dropbox/work/thebbgroup/weekly/{:%Y%m%d}.org'.format(
         today - timedelta(days=delta))
 
 
