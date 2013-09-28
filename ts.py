@@ -48,7 +48,8 @@ class Timesheet(list):
         self.when += timedelta(days=1)
 
     def _new_chunk(self, time, task):
-        time = self.when + timedelta(hours=int(time[:2]), minutes=int(time[2:]))
+        time = self.when + timedelta(hours=int(time[:2]),
+                                     minutes=int(time[2:]))
         if len(self):
             self[-1]['end'] = time
         self.append(dict(task=task, start=time))
@@ -77,7 +78,6 @@ def _datetime_from_filename(path):
     return datetime(int(filename[:4]),
                     int(filename[4:6]),
                     int(filename[6:8]))
-                    
 
 if __name__ == '__main__':
     read_files(sys.argv[1:])
