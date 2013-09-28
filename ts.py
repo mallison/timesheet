@@ -1,7 +1,7 @@
 import os
 import re
 import sys
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from pprint import pprint
 
 
@@ -70,7 +70,7 @@ def read_files(paths):
                 timesheet = new_timesheet
             else:
                 timesheet.extend(new_timesheet)
-    pprint(timesheet)
+    return timesheet
 
 
 def _datetime_from_filename(path):
@@ -79,5 +79,30 @@ def _datetime_from_filename(path):
                     int(filename[4:6]),
                     int(filename[6:8]))
 
+
+# TODO move filters to another module
+def _from(timesheet, from_datetime):
+    return (chunk for chunk in timesheet if chunk['end'] >= from_datetime)
+
+
+def _to(timesheet, to_datetime):
+    return (chunk for chunk in timesheet if chunk['end'] < to_datetime)
+
+
+def _task(timesheet, task):
+    return (chunk for chunk in timesheet if chunk['task'] == task)
+
+
+def _stand_up(timesheet):
+    # TODO account for Monday and Friday
+    # TODO slicker way to get start of day as datetime?
+    today = date.today()
+    today = datetime(today.year, today.month, today.day)
+    start = today - timedelta(1)
+    end = start + timedelta(2)
+    return _from(_to(timesheet, end), start)
+
+
 if __name__ == '__main__':
-    read_files(sys.argv[1:])
+    timesheet = read_files(sys.argv[1:])
+    pprint(list(_stand_up(timesheet)))
