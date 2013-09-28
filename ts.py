@@ -39,7 +39,9 @@ class Timesheet(list):
     def _parse_timestamp(self, line):
         m = self.timestamp_regexp.match(line)
         if m:
-            return m.groups()
+            time, task = m.groups()
+            task = tuple(t.strip() for t in task.split(':'))
+            return time, task
         else:
             return None, None
 
