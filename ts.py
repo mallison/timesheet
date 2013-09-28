@@ -4,6 +4,15 @@ import sys
 from datetime import date, datetime, timedelta
 from pprint import pprint
 
+# TODO default to this week with no file paths
+# TODO reporting
+# TODO report on average misc time per day
+# TODO eom report
+# TODO argparse
+# TODO get commit messages from reflog
+# TODO validation
+# TODO check for mis-spelled tasks
+
 
 class Timesheet(list):
     days = [datetime(2013, 9, d).strftime('%A') for d in range(16, 23)]
