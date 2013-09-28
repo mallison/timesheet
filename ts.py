@@ -92,7 +92,9 @@ def _to(timesheet, to_datetime):
 
 
 def _task(timesheet, task):
-    return (chunk for chunk in timesheet if chunk['task'] == task)
+    depth = len(task)
+    return (chunk for chunk in timesheet
+            if chunk['task'][:depth] == task[:depth])
 
 
 def _stand_up(timesheet):
@@ -106,5 +108,5 @@ def _stand_up(timesheet):
 
 
 if __name__ == '__main__':
-    timesheet = read_files(sys.argv[1:])
-    pprint(list(_stand_up(timesheet)))
+    timesheet = read_files(sys.argv[2:])
+    pprint(list(_stand_up(_task(timesheet, tuple(sys.argv[1].split(':'))))))
