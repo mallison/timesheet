@@ -16,9 +16,12 @@ def task(timesheet, task):
 
 
 def stand_up(timesheet):
-    # TODO account for Monday and Friday
+    # TODO account for Monday
     # TODO slicker way to get start of day as datetime?
     today = date.today()
+    weekday = today.weekday()
+    if weekday >= 5:
+        today += timedelta(days=4 - weekday)
     today = datetime(today.year, today.month, today.day)
     start = today - timedelta(1)
     end = start + timedelta(2)

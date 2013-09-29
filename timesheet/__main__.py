@@ -15,7 +15,7 @@ def main():
     parser.add_argument('-l', '--level', type=int, default=1)
     parser.add_argument('--since', type=_date_type)
     parser.add_argument('--until', type=_date_type)
-    parser.add_argument('--stand-up')
+    parser.add_argument('--stand-up', action='store_true')
     parser.add_argument('-r', '--resolution',
                         nargs='*',
                         choices=report.DATE_FORMAT)
@@ -30,8 +30,10 @@ def main():
         timesheet = _read_files([_get_current_timesheet_path()])
 
     if args.stand_up:
-        timesheet = filters.standup(timesheet, args.until)
+        timesheet = filters.stand_up(timesheet)
+        resolution = 'day'
     else:
+        resolution = args.resolution
         if args.since:
             timesheet = filters.from_(timesheet, args.since)
         if args.until:
@@ -40,7 +42,7 @@ def main():
         timesheet = filters.task(
             timesheet, tuple(task.strip() for task in args.task.split(':')))
     report.show_groups(timesheet,
-                       resolutions=args.resolution,
+                       resolutions=[resolution],
                        task_level=args.level)
 
 
