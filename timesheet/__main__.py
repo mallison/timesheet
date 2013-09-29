@@ -1,6 +1,7 @@
 import argparse
+import glob
 import os
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 
 import filters
 import report
@@ -16,6 +17,7 @@ def main():
     parser.add_argument('--since', type=_date_type)
     parser.add_argument('--until', type=_date_type)
     parser.add_argument('--stand-up', action='store_true')
+    parser.add_argument('--eom', action='store_true')
     parser.add_argument('-r', '--resolution',
                         nargs='*',
                         choices=report.DATE_FORMAT)
@@ -24,7 +26,9 @@ def main():
                         help="show commits to repo")
     args = parser.parse_args()
 
-    if args.timesheet:
+    if args.eom:
+        timesheet = _read_files(_get_eom_timesheet_paths())
+    elif args.timesheet:
         timesheet = _read_files(args.timesheet)
     else:
         timesheet = _read_files([_get_current_timesheet_path()])
@@ -67,6 +71,12 @@ def _get_current_timesheet_path():
     delta = today.weekday()
     return '/Users/mark/Dropbox/work/thebbgroup/weekly/{:%Y%m%d}.org'.format(
         today - timedelta(days=delta))
+
+
+def _get_eom_timesheet_paths():
+    today = date.today()
+    return glob.glob('/Users/Mark/Dropbox/work/thebbgroup/weekly/%s*org' %
+                     today.strftime('%Y%m'))
 
 
 def _datetime_from_filename(path):
