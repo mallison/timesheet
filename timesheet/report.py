@@ -53,9 +53,9 @@ def summarize(slots, task_level=1, show_commits=False):
     overall = timedelta(0)
     slots = list(slots)
     for slot in slots:
-        if slot.task[0] not in AFK:
-            duration = slot.end - slot.start
-            totals[slot.task[:task_level]] += duration
+        if slot['task'][0] not in AFK:
+            duration = slot['end'] - slot['start']
+            totals[slot['task'][:task_level]] += duration
             overall += duration
     most = max([t[1] for t in totals.items()])
     for task, total in sorted(totals.items(), key=itemgetter(1)):

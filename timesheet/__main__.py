@@ -1,9 +1,9 @@
 import argparse
 import os
 from datetime import datetime, timedelta
-from pprint import pprint
 
 import filters
+import report
 from timesheet import Timesheet
 
 
@@ -36,7 +36,7 @@ def main():
     if args.task:
         timesheet = filters.task(
             timesheet, tuple(task.strip() for task in args.task.split(':')))
-    pprint(list(timesheet))
+    report.show_groups(timesheet)
 
 
 def _date_type(date_arg):
