@@ -16,6 +16,9 @@ def main():
     parser.add_argument('--since', type=_date_type)
     parser.add_argument('--until', type=_date_type)
     parser.add_argument('--stand-up')
+    parser.add_argument('-r', '--resolution',
+                        nargs='*',
+                        choices=report.DATE_FORMAT)
     parser.add_argument('-t', '--task',)
     parser.add_argument('-c', '--commits', action='store_true',
                         help="show commits to repo")
@@ -36,7 +39,9 @@ def main():
     if args.task:
         timesheet = filters.task(
             timesheet, tuple(task.strip() for task in args.task.split(':')))
-    report.show_groups(timesheet)
+    report.show_groups(timesheet,
+                       resolutions=args.resolution,
+                       task_level=args.level)
 
 
 def _date_type(date_arg):

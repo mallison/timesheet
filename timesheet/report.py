@@ -31,7 +31,7 @@ def group_slots_by_time_period(slots, resolution):
     """
     return itertools.groupby(
         slots,
-        lambda slot: TRUNCATE_DATE[resolution](slot.start))
+        lambda slot: TRUNCATE_DATE[resolution](slot['start']))
 
 
 def show_groups(slots, resolutions=None, task_level=1, show_commits=False):
