@@ -58,7 +58,7 @@ def summarize(slots, task_level=1, show_commits=False):
             totals[slot['task'][:task_level]] += duration
             overall += duration
     most = max([t[1] for t in totals.items()])
-    for task, total in sorted(totals.items(), key=itemgetter(1)):
+    for task, total in sorted(totals.items(), key=itemgetter(1), reverse=True):
         print "{:30s} {:15s} {}".format(
             ': '.join(task)[:30],
             man_days(total),
