@@ -35,7 +35,7 @@ def main():
 
     if args.stand_up:
         timesheet = filters.stand_up(timesheet)
-        resolution = 'day'
+        resolution = ['day']
     else:
         resolution = args.resolution
         if args.since:
@@ -46,8 +46,9 @@ def main():
         timesheet = filters.task(
             timesheet, tuple(task.strip() for task in args.task.split(':')))
     report.show_groups(timesheet,
-                       resolutions=[resolution],
-                       task_level=args.level)
+                       resolutions=resolution,
+                       task_level=args.level,
+                       show_commits=args.commits)
 
 
 def _date_type(date_arg):
