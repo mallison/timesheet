@@ -49,7 +49,7 @@ class Timesheet(list):
     def _new_chunk(self, time, task):
         time = self.when + timedelta(hours=int(time[:2]),
                                      minutes=int(time[2:]))
-        if len(self):
+        if len(self) and 'end' not in self[-1]:
             self[-1]['end'] = time
         self.append(dict(task=task, start=time))
 
