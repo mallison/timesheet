@@ -1,7 +1,6 @@
 import itertools
-import os
-import pickle
 import re
+import subprocess
 from collections import defaultdict
 from datetime import datetime, timedelta
 from operator import itemgetter
@@ -18,7 +17,7 @@ DATE_FORMAT = {
     'month': "%b %Y",
     'day': "%a %b %d, %Y",
 }
-COMMIT_LOG = os.path.expanduser('~/.gitlog')
+REFLOG_RE = re.compile(r'^[0-9a-f]+ .*?\{([\d\-: ]+) \+.*?: (.*)$')
 
 
 def group_slots_by_time_period(slots, resolution):
@@ -31,7 +30,7 @@ def group_slots_by_time_period(slots, resolution):
     """
     return itertools.groupby(
         slots,
-        lambda slot: TRUNCATE_DATE[resolution](slot.start))
+        lambda slot: TRUNCATE_DATE[resolution](slot['start']))
 
 
 def show_groups(slots, resolutions=None, task_level=1, show_commits=False):
@@ -53,12 +52,12 @@ def summarize(slots, task_level=1, show_commits=False):
     overall = timedelta(0)
     slots = list(slots)
     for slot in slots:
-        if slot.task[0] not in AFK:
-            duration = slot.end - slot.start
-            totals[slot.task[:task_level]] += duration
+        if slot['task'][0] not in AFK:
+            duration = slot['end'] - slot['start']
+            totals[slot['task'][:task_level]] += duration
             overall += duration
     most = max([t[1] for t in totals.items()])
-    for task, total in sorted(totals.items(), key=itemgetter(1)):
+    for task, total in sorted(totals.items(), key=itemgetter(1), reverse=True):
         print "{:30s} {:15s} {}".format(
             ': '.join(task)[:30],
             man_days(total),
@@ -66,7 +65,7 @@ def summarize(slots, task_level=1, show_commits=False):
             )
         if show_commits:
             for slot in slots:
-                if slot.task[:task_level] == task:
+                if slot['task'][:task_level] == task:
                     print_commits(slot)
             print
     print "{:30s} {}".format("OVERALL", man_days(overall))
@@ -76,12 +75,15 @@ _commits = None
 def print_commits(slot):
     global _commits
     if _commits is None:
-        with open(COMMIT_LOG) as f:
-            _commits = pickle.load(f)
-    commits = [c for c in _commits if slot.start <= c[0] < slot.end]
-    for time, msg in commits:
-        msg = re.sub(r'^#.*$', '', msg, flags=re.M).strip()
-        print "    {0:%H%M} {1:}".format(time, msg)
+        reflog = subprocess.check_output(
+            ['git', 'reflog', '--date', 'iso', '--all'])
+        _commits = reflog
+    for line in  _commits.splitlines():
+        m = REFLOG_RE.match(line)
+        if m:
+            timestamp = datetime.strptime(m.group(1), '%Y-%m-%d %H:%M:%S')
+            if slot['start'] <= timestamp < slot['end']:
+                print "    {0:%H%M} {1:}".format(timestamp, m.group(2))
 
 
 def man_days(delta):
