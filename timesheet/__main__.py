@@ -31,7 +31,7 @@ def main():
     elif args.timesheet:
         timesheet = _read_files(args.timesheet)
     else:
-        timesheet = _read_files([_get_current_timesheet_path()])
+        timesheet = _read_files(_get_current_timesheet_paths())
 
     if args.stand_up:
         timesheet = filters.stand_up(timesheet)
@@ -67,11 +67,13 @@ def _read_files(paths):
     return timesheet
 
 
-def _get_current_timesheet_path():
+def _get_current_timesheet_paths():
     today = datetime.today()
     delta = today.weekday()
-    return '/Users/mark/Dropbox/work/thebbgroup/weekly/{:%Y%m%d}.org'.format(
-        today - timedelta(days=delta))
+    this_week = today - timedelta(days=delta)
+    last_week = this_week - timedelta(days=7)
+    return ['/Users/user/thebbgroup/weekly/{:%Y%m%d}.org'.format(d)
+            for d in last_week, this_week]
 
 
 def _get_eom_timesheet_paths():
