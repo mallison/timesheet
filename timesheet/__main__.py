@@ -78,7 +78,7 @@ def _get_current_timesheet_paths():
 
 def _get_eom_timesheet_paths():
     today = date.today()
-    return glob.glob('/Users/Mark/Dropbox/work/thebbgroup/weekly/%s*org' %
+    return glob.glob('/Users/user/thebbgroup/weekly/%s*org' %
                      today.strftime('%Y%m'))
 
 
