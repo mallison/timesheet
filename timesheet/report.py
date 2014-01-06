@@ -100,12 +100,12 @@ def _summarize_level(level_dict, level=0, max_level=0):
                for k, v in level_dict.items()]
     as_list.sort(reverse=True)
     for cumulative_duration, level_duration, name in as_list:
-        label = (' ' * level * 2) + name
+        label = (' ' * level * 4) + name
         print '%-40s  %s' % (label, man_days(cumulative_duration))
         next_level = level + 1
         if next_level <= max_level:
             if level_duration and level_duration != cumulative_duration:
-                label = (' ' * (level + 1) * 2)
+                label = (' ' * (level + 1) * 4)
                 print '%-40s  %s' % (label, man_days(level_duration))
             _summarize_level(level_dict[name],
                              level=level + 1,
