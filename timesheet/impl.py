@@ -78,7 +78,10 @@ def is_end_of_timesheet(line):
 
 
 def print_report(report, level=0):
-    for task, details in report.items():
+    tasks = report.keys()
+    tasks.sort(key=lambda t: -report[t]['duration'])
+    for task in tasks:
+        details = report[task]
         indent = ' ' * level * 4
         print '%-50s%s' % (indent + task, details['duration'])
         print_report(details['subtasks'], level + 1)
