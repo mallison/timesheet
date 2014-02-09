@@ -3,7 +3,7 @@ import re
 import subprocess
 import sys
 
-DAYS = [datetime.date(2014, 2, d).strftime('%b') for d in range(3, 11)]
+DAYS = [datetime.date(2014, 2, d).strftime('%A') for d in range(3, 10)]
 TASK_START_REGEX = re.compile(r'(\d{4})')
 REFLOG_RE = re.compile(r'^[0-9a-f]+ .*?\{([\d\-: ]+) \+.*?: (.*)$')
 
@@ -22,7 +22,7 @@ def main(line_handler_func):
 
 
 def get_day(line):
-    day = line.split(' ', 1)[0]
+    day = line.strip()
     if day in DAYS:
         return day
 
