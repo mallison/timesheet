@@ -1,18 +1,24 @@
 import datetime
 import re
+import subprocess
 import sys
+import time
 
 DAYS = [datetime.date(2014, 2, d).strftime('%b') for d in range(3, 11)]
 TASK_START_REGEX = re.compile(r'(\d{4})')
+REFLOG_RE = re.compile(r'^[0-9a-f]+ .*?\{([\d\-: ]+) \+.*?: (.*)$')
 
+DATE = datetime.date(2014, 2, 3)
 TASKS = []
 REPORT = {}
+REFLOG = {}
 
                     
 def main(line_handler_func):
     with open(sys.argv[1]) as f:
         for line in f:
             line_handler_func(line)
+    read_reflog()
     print_report(REPORT)
 
 
@@ -29,7 +35,10 @@ def validate_day(line):
 def get_timestamp_and_task(line):
     m = TASK_START_REGEX.match(line)
     timestamp = m.group(1)
-    return timestamp, line.replace(timestamp, '').strip()
+    task = line.replace(timestamp, '').strip()
+    timestamp = datetime.datetime.combine(
+        DATE, datetime.time(int(timestamp[:2]), int(timestamp[-2:])))
+    return timestamp, task
 
 
 def set_datetime_to_this_day():
@@ -58,10 +67,10 @@ def close_last_task(timestamp):
     for part in parts:
         level.setdefault(part, {
             'slots': [],
-            'duration': 0,
+            'duration': datetime.timedelta(0),
             'subtasks': {},
         })['slots'].append(task)
-        level[part]['duration'] += _get_time(task)
+        level[part]['duration'] += _get_duration(task)
         level = level[part]['subtasks']
 
 
@@ -82,23 +91,24 @@ def print_report(report, level=0):
     tasks.sort(key=lambda t: -report[t]['duration'])
     for task in tasks:
         details = report[task]
-        indent = ' ' * level * 4
+        reflog = []
+        for slot in details['slots']:
+            reflog.extend(
+                i for i in REFLOG.items()
+                if slot['start'] <= i[0] < slot['end']
+            )
+        indent = ' ' * level * 2
         print '%-50s%s' % (
             indent + task,
-            man_days(datetime.timedelta(minutes=details['duration'])))
+            man_days(details['duration']))
+        print reflog
         print_report(details['subtasks'], level + 1)
     if level == 1:
         print
 
 
-def _get_time(task):
-    start = _time_to_int(task['start'])
-    end = _time_to_int(task['end'])
-    return end - start
-
-
-def _time_to_int(time):
-    return int(time[:2]) * 60 + int(time[-2:])
+def _get_duration(task):
+    return task['end'] - task['start']
 
 
 def man_days(delta):
@@ -128,3 +138,16 @@ def man_days(delta):
         if amount:
             out.append("{:.0f}{}".format(amount, measure))
     return " ".join(out)
+
+
+def read_reflog():
+    global REFLOG
+    contents = subprocess.check_output(
+        ['git', 'reflog', '--date', 'iso', '--all'],
+        cwd='/Users/user/thebbgroup/cosmo',
+    )
+    for line in contents.splitlines():
+        m = REFLOG_RE.match(line)
+        if m:
+            timestamp = datetime.datetime.strptime(m.group(1), '%Y-%m-%d %H:%M:%S')
+            REFLOG[timestamp] = m.group(2)
