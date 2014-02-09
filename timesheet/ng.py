@@ -12,7 +12,7 @@ def _handle_line(line):
         # validate_day()
         if is_last_task_open():
             remove_last_task()
-        set_datetime_to_this_day()
+        set_datetime_to_this_day(day)
 
     elif timestamp:
         # validate_task_name(task)

@@ -2,7 +2,6 @@ import datetime
 import re
 import subprocess
 import sys
-import time
 
 DAYS = [datetime.date(2014, 2, d).strftime('%b') for d in range(3, 11)]
 TASK_START_REGEX = re.compile(r'(\d{4})')
@@ -41,8 +40,9 @@ def get_timestamp_and_task(line):
     return timestamp, task
 
 
-def set_datetime_to_this_day():
-    pass
+def set_datetime_to_this_day(day):
+    global DATE
+    DATE += datetime.timedelta(days=DAYS.index(day))
 
 
 def start_task(timestamp, name):
@@ -97,11 +97,12 @@ def print_report(report, level=0):
                 i for i in REFLOG.items()
                 if slot['start'] <= i[0] < slot['end']
             )
+        reflog.sort()
         indent = ' ' * level * 2
         print '%-50s%s' % (
             indent + task,
             man_days(details['duration']))
-        print reflog
+        print ('\n' + indent).join(l[1] for l in reflog)
         print_report(details['subtasks'], level + 1)
     if level == 1:
         print
