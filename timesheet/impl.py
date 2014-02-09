@@ -83,7 +83,9 @@ def print_report(report, level=0):
     for task in tasks:
         details = report[task]
         indent = ' ' * level * 4
-        print '%-50s%s' % (indent + task, details['duration'])
+        print '%-50s%s' % (
+            indent + task,
+            man_days(datetime.timedelta(minutes=details['duration'])))
         print_report(details['subtasks'], level + 1)
     if level == 1:
         print
@@ -97,3 +99,32 @@ def _get_time(task):
 
 def _time_to_int(time):
     return int(time[:2]) * 60 + int(time[-2:])
+
+
+def man_days(delta):
+    """
+    Return ``timedelta`` in human readable man days.
+
+    >>> import timedelta
+    >>> t = timedelta(seconds=(3 * 7.5 * 3600) + (3 * 3600) + 1210)
+    >>> man_days(t)
+    '3 days, 3 hours, 20 minutes'
+
+    >>> t = timedelta(seconds=3625)
+    >>> man_days(t)
+    '1 hour'
+
+    >>> t = timedelta(seconds=484)
+    >>> man_days(t)
+    '8 minutes'
+
+    """
+    minutes = (delta.days * 24 * 3600 + delta.seconds) / 60
+    # days, minutes = divmod(minutes, MAN_DAY * 60)
+    hours, minutes = divmod(minutes, 60)
+    out = []
+    for measure, amount in zip(("h", "m"),
+                               (hours, minutes)):
+        if amount:
+            out.append("{:.0f}{}".format(amount, measure))
+    return " ".join(out)
