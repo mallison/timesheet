@@ -56,8 +56,13 @@ def close_last_task(timestamp):
     parts = [t.strip() for t in task['name'].split(':')]
     level = REPORT
     for part in parts:
-        level.setdefault(part, {'tasks': []})['tasks'].append(task)
-        level = level[part]
+        level.setdefault(part, {
+            'slots': [],
+            'duration': 0,
+            'subtasks': {},
+        })['slots'].append(task)
+        level[part]['duration'] += _get_time(task)
+        level = level[part]['subtasks']
 
 
 def is_last_task_open():
@@ -74,10 +79,18 @@ def is_end_of_timesheet(line):
 
 def print_report(report, level=0):
     for task, details in report.items():
-        if task == 'tasks':
-            continue
         indent = ' ' * level * 4
-        print '%s%s' % (indent, task)
-        print_report(details, level + 1)
+        print '%-50s%s' % (indent + task, details['duration'])
+        print_report(details['subtasks'], level + 1)
     if level == 1:
         print
+
+
+def _get_time(task):
+    start = _time_to_int(task['start'])
+    end = _time_to_int(task['end'])
+    return end - start
+
+
+def _time_to_int(time):
+    return int(time[:2]) * 60 + int(time[-2:])
