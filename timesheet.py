@@ -14,14 +14,45 @@ REPORT = {}
 REFLOG = {}
 
                     
-def main(line_handler_func):
-    read_reflog()
+def main():
+    _read_reflog()
     with open(sys.argv[1]) as f:
         for line in f:
-            line_handler_func(line)
+            _handle_line(line)
 
 
-def get_day(line):
+def _handle_line(line):
+    day = _get_day(line)
+    try:
+        timestamp, task = _get_timestamp_and_task(line)
+    except AttributeError:
+        timestamp = None
+
+    if day:
+        # validate_day()
+        _close_current_day()
+        _set_datetime_to_this_day(day)
+
+    elif timestamp:
+        # validate_task_name(task)
+        # validate_task_start(timestamp)
+        if _is_last_task_open():
+            # validate_task_close_time
+            _close_last_task(timestamp)
+        _start_task(timestamp, task)
+
+    elif _is_end_of_timesheet(line):
+        _close_current_day()
+        return
+
+    else:
+        if _is_last_task_open():
+            _add_line_to_task_notes(line)
+        # else:
+        #     warn_about_stray_text
+
+
+def _get_day(line):
     day = line.strip()
     if day in DAYS:
         return day
@@ -31,7 +62,7 @@ def validate_day(line):
     pass
 
 
-def get_timestamp_and_task(line):
+def _get_timestamp_and_task(line):
     m = TASK_START_REGEX.match(line)
     timestamp = m.group(1)
     task = line.replace(timestamp, '').strip()
@@ -40,13 +71,13 @@ def get_timestamp_and_task(line):
     return timestamp, task
 
 
-def set_datetime_to_this_day(day):
+def _set_datetime_to_this_day(day):
     global DATE
     # TODO days might be skipped
     DATE += datetime.timedelta(1)
 
 
-def start_task(timestamp, name):
+def _start_task(timestamp, name):
     task = dict(
         name=name,
         start=timestamp,
@@ -56,11 +87,11 @@ def start_task(timestamp, name):
     TASKS.append(task)
 
 
-def add_line_to_task_notes(line):
+def _add_line_to_task_notes(line):
     TASKS[-1]['notes'].append(line)
 
 
-def close_last_task(timestamp):
+def _close_last_task(timestamp):
     task = TASKS[-1]
     task['end'] = timestamp
     parts = [t.strip() for t in task['name'].split(':')]
@@ -75,19 +106,35 @@ def close_last_task(timestamp):
         level = level[part]['subtasks']
 
 
-def is_last_task_open():
+def _is_last_task_open():
     return len(TASKS) > 1 and 'end' not in TASKS[-1]
 
 
-def remove_last_task():
+def _remove_last_task():
     del TASKS[-1]
     
 
-def is_end_of_timesheet(line):
+def _close_current_day():
+    global REPORT, TASKS
+    if _is_last_task_open():
+        _remove_last_task()
+        day = TASKS[-1]['start'].strftime('%A')
+        for afk in AFK:
+            if afk in REPORT:
+                del REPORT[afk]
+        print '#' * 70
+        print day
+        print '#' * 70
+        _print_report(REPORT)
+        REPORT = {}
+        TASKS = []
+
+
+def _is_end_of_timesheet(line):
     return '-' * 50 in line
 
 
-def print_report(report, level=0):
+def _print_report(report, level=0):
     tasks = report.keys()
     tasks.sort(key=lambda t: -report[t]['duration'])
     if level == 0:
@@ -110,7 +157,7 @@ def print_report(report, level=0):
         reflog.sort()
         if reflog:
             print ('\n' + indent).join(l[1] for l in reflog)
-        print_report(details['subtasks'], level + 1)
+        _print_report(details['subtasks'], level + 1)
     if level == 1:
         print
 
@@ -119,7 +166,7 @@ def _get_duration(task):
     return task['end'] - task['start']
 
 
-def man_days(delta):
+def _man_days(delta):
     """
     Return ``timedelta`` in human readable man days.
 
@@ -148,7 +195,7 @@ def man_days(delta):
     return " ".join(out)
 
 
-def read_reflog():
+def _read_reflog():
     global REFLOG
     contents = subprocess.check_output(
         ['git', 'reflog', '--date', 'iso', '--all'],
@@ -161,17 +208,5 @@ def read_reflog():
             REFLOG[timestamp] = m.group(2)
 
 
-def close_current_day():
-    global REPORT, TASKS
-    if is_last_task_open():
-        remove_last_task()
-        day = TASKS[-1]['start'].strftime('%A')
-        for afk in AFK:
-            if afk in REPORT:
-                del REPORT[afk]
-        print '#' * 70
-        print day
-        print '#' * 70
-        print_report(REPORT)
-        REPORT = {}
-        TASKS = []
+if __name__ == '__main__':
+    main()
