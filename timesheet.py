@@ -81,6 +81,14 @@ def _add_line_to_task_notes(line):
     TASKS[-1]['notes'].append(line)
 
 
+def _is_last_task_open():
+    return len(TASKS) > 1 and 'end' not in TASKS[-1]
+
+
+def _remove_last_task():
+    del TASKS[-1]
+
+
 def _close_last_task(timestamp):
     task = TASKS[-1]
     task['end'] = timestamp
@@ -96,12 +104,8 @@ def _close_last_task(timestamp):
         level = level[part]['subtasks']
 
 
-def _is_last_task_open():
-    return len(TASKS) > 1 and 'end' not in TASKS[-1]
-
-
-def _remove_last_task():
-    del TASKS[-1]
+def _get_duration(task):
+    return task['end'] - task['start']
     
 
 def _close_current_day():
@@ -149,10 +153,6 @@ def _print_report(report, level=0):
         _print_report(details['subtasks'], level + 1)
     if level == 1:
         print
-
-
-def _get_duration(task):
-    return task['end'] - task['start']
 
 
 def _man_days(delta):
