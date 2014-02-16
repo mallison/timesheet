@@ -10,8 +10,7 @@ def _handle_line(line):
 
     if day:
         # validate_day()
-        if is_last_task_open():
-            remove_last_task()
+        close_current_day()
         set_datetime_to_this_day(day)
 
     elif timestamp:
@@ -23,7 +22,7 @@ def _handle_line(line):
         start_task(timestamp, task)
 
     elif is_end_of_timesheet(line):
-        remove_last_task()
+        close_current_day()
         return
 
     else:

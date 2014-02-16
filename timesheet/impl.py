@@ -6,6 +6,7 @@ import sys
 DAYS = [datetime.date(2014, 2, d).strftime('%A') for d in range(3, 10)]
 TASK_START_REGEX = re.compile(r'(\d{4})')
 REFLOG_RE = re.compile(r'^[0-9a-f]+ .*?\{([\d\-: ]+) \+.*?: (.*)$')
+AFK = ['lunch', 'afk']
 
 DATE = datetime.date(2014, 2, 2)
 TASKS = []
@@ -14,11 +15,10 @@ REFLOG = {}
 
                     
 def main(line_handler_func):
+    read_reflog()
     with open(sys.argv[1]) as f:
         for line in f:
             line_handler_func(line)
-    read_reflog()
-    print_report(REPORT)
 
 
 def get_day(line):
@@ -90,12 +90,17 @@ def is_end_of_timesheet(line):
 def print_report(report, level=0):
     tasks = report.keys()
     tasks.sort(key=lambda t: -report[t]['duration'])
+    if level == 0:
+        overall = sum((d['duration'] for d in report.values()), datetime.timedelta(0))
+        print '%-50s%s' % ('OVERALL', overall)
+        print '-' * 70
     for task in tasks:
         details = report[task]
         indent = ' ' * level * 2
         print '%-50s%s' % (
             indent + task,
-            man_days(details['duration']))
+            # man_days(details['duration']))
+            details['duration'])
         reflog = []
         for slot in details['slots']:
             reflog.extend(
@@ -154,3 +159,19 @@ def read_reflog():
         if m and 'commit' in m.group(2):
             timestamp = datetime.datetime.strptime(m.group(1), '%Y-%m-%d %H:%M:%S')
             REFLOG[timestamp] = m.group(2)
+
+
+def close_current_day():
+    global REPORT, TASKS
+    if is_last_task_open():
+        remove_last_task()
+        day = TASKS[-1]['start'].strftime('%A')
+        for afk in AFK:
+            if afk in REPORT:
+                del REPORT[afk]
+        print '#' * 70
+        print day
+        print '#' * 70
+        print_report(REPORT)
+        REPORT = {}
+        TASKS = []
