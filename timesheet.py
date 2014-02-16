@@ -29,15 +29,11 @@ def _handle_line(line):
         timestamp = None
 
     if day:
-        # validate_day()
         _close_current_day()
         _set_datetime_to_this_day(day)
 
     elif timestamp:
-        # validate_task_name(task)
-        # validate_task_start(timestamp)
         if _is_last_task_open():
-            # validate_task_close_time
             _close_last_task(timestamp)
         _start_task(timestamp, task)
 
@@ -48,18 +44,12 @@ def _handle_line(line):
     else:
         if _is_last_task_open():
             _add_line_to_task_notes(line)
-        # else:
-        #     warn_about_stray_text
 
 
 def _get_day(line):
     day = line.strip()
     if day in DAYS:
         return day
-
-
-def validate_day(line):
-    pass
 
 
 def _get_timestamp_and_task(line):
