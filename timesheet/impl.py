@@ -7,7 +7,7 @@ DAYS = [datetime.date(2014, 2, d).strftime('%A') for d in range(3, 10)]
 TASK_START_REGEX = re.compile(r'(\d{4})')
 REFLOG_RE = re.compile(r'^[0-9a-f]+ .*?\{([\d\-: ]+) \+.*?: (.*)$')
 
-DATE = datetime.date(2014, 2, 3)
+DATE = datetime.date(2014, 2, 2)
 TASKS = []
 REPORT = {}
 REFLOG = {}
@@ -42,7 +42,8 @@ def get_timestamp_and_task(line):
 
 def set_datetime_to_this_day(day):
     global DATE
-    DATE += datetime.timedelta(days=DAYS.index(day))
+    # TODO days might be skipped
+    DATE += datetime.timedelta(1)
 
 
 def start_task(timestamp, name):
@@ -91,6 +92,10 @@ def print_report(report, level=0):
     tasks.sort(key=lambda t: -report[t]['duration'])
     for task in tasks:
         details = report[task]
+        indent = ' ' * level * 2
+        print '%-50s%s' % (
+            indent + task,
+            man_days(details['duration']))
         reflog = []
         for slot in details['slots']:
             reflog.extend(
@@ -98,11 +103,8 @@ def print_report(report, level=0):
                 if slot['start'] <= i[0] < slot['end']
             )
         reflog.sort()
-        indent = ' ' * level * 2
-        print '%-50s%s' % (
-            indent + task,
-            man_days(details['duration']))
-        print ('\n' + indent).join(l[1] for l in reflog)
+        if reflog:
+            print ('\n' + indent).join(l[1] for l in reflog)
         print_report(details['subtasks'], level + 1)
     if level == 1:
         print
@@ -149,6 +151,6 @@ def read_reflog():
     )
     for line in contents.splitlines():
         m = REFLOG_RE.match(line)
-        if m:
+        if m and 'commit' in m.group(2):
             timestamp = datetime.datetime.strptime(m.group(1), '%Y-%m-%d %H:%M:%S')
             REFLOG[timestamp] = m.group(2)
