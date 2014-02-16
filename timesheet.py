@@ -139,15 +139,14 @@ def _print_report(report, level=0):
     tasks.sort(key=lambda t: -report[t]['duration'])
     if level == 0:
         overall = sum((d['duration'] for d in report.values()), datetime.timedelta(0))
-        print '%-50s%s' % ('OVERALL', overall)
+        print '%-50s%s' % ('OVERALL', _man_days(overall))
         print '-' * 70
     for task in tasks:
         details = report[task]
         indent = ' ' * level * 2
         print '%-50s%s' % (
             indent + task,
-            # man_days(details['duration']))
-            details['duration'])
+            _man_days(details['duration']))
         reflog = []
         for slot in details['slots']:
             reflog.extend(
