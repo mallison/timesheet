@@ -82,7 +82,7 @@ def _add_line_to_task_notes(line):
 
 
 def _is_last_task_open():
-    return len(TASKS) > 1 and 'end' not in TASKS[-1]
+    return TASKS and 'end' not in TASKS[-1]
 
 
 def _remove_last_task():
