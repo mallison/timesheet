@@ -99,6 +99,8 @@ def _close_last_task(timestamp):
     parts = [t.strip() for t in task['name'].split(':')]
     level = REPORT
     for part in parts:
+        if not part:
+            part = 'misc'
         level.setdefault(part, {
             'slots': [],
             'duration': datetime.timedelta(0),
