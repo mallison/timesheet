@@ -14,13 +14,13 @@ REPORT = {}
 REFLOG = {}
 
                     
-def main():
+def main(file_path):
     global DATE
     _read_reflog()
     file_name = os.path.splitext(
-        os.path.basename(sys.argv[1]))[0]
+        os.path.basename(file_path))[0]
     DATE = datetime.datetime.strptime(file_name, '%Y%m%d') - datetime.timedelta(1)
-    with open(sys.argv[1]) as f:
+    with open(file_path) as f:
         for line in f:
             _handle_line(line)
 
@@ -204,4 +204,4 @@ def _read_reflog():
 
 
 if __name__ == '__main__':
-    main()
+    main(sys.argv[1])
