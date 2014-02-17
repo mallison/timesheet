@@ -1,4 +1,5 @@
 import datetime
+import os
 import re
 import subprocess
 import sys
@@ -8,14 +9,17 @@ TASK_START_REGEX = re.compile(r'(\d{4})')
 REFLOG_RE = re.compile(r'^[0-9a-f]+ .*?\{([\d\-: ]+) \+.*?: (.*)$')
 AFK = ['lunch', 'afk']
 
-DATE = datetime.date(2014, 2, 2)
 TASKS = []
 REPORT = {}
 REFLOG = {}
 
                     
 def main():
+    global DATE
     _read_reflog()
+    file_name = os.path.splitext(
+        os.path.basename(sys.argv[1]))[0]
+    DATE = datetime.datetime.strptime(file_name, '%Y%m%d') - datetime.timedelta(1)
     with open(sys.argv[1]) as f:
         for line in f:
             _handle_line(line)
