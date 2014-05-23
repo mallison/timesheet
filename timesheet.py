@@ -12,6 +12,7 @@ AFK = ['lunch', 'afk']
 TASKS = []
 REPORT = {}
 REFLOG = {}
+REPORTING_GRANULARITY = 'week'
 
                     
 def main(file_path):
@@ -38,7 +39,6 @@ def _handle_line(line):
         except AttributeError:
             if _is_end_of_timesheet(line):
                 _close_current_day()
-                _report_current_day()
             elif _is_current_task_open():
                 _add_line_to_task_notes(line)
         else:
@@ -48,7 +48,6 @@ def _handle_line(line):
     else:
         if _is_current_task_open():
             _close_current_day()
-            _report_current_day()
         _update_current_day(day)
 
 
@@ -116,9 +115,23 @@ def _get_duration(task):
 
 def _close_current_day():
     del TASKS[-1]
+    if _reporting_interval_reached():
+        _report_current_interval()
+
+def _reporting_interval_reached():
+    if REPORTING_GRANULARITY == 'day':
+        return True
+    elif REPORTING_GRANULARITY == 'week':
+        days = TASKS[-1]['end'].date() - START_DATE.date()
+        if days.days == 4:
+            return True
+    # elif REPORTING_GRANULARITY == 'month':
+    # elif REPORTING_GRANULARITY == 'year':
+    # elif REPORTING_GRANULARITY is None:
+    return False
 
 
-def _report_current_day():
+def _report_current_interval():
     global REPORT, TASKS
     day = TASKS[-1]['start'].strftime('%A')
     for afk in AFK:
