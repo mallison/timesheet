@@ -15,45 +15,50 @@ REFLOG = {}
 
                     
 def main(file_path):
-    global DATE
+    _set_start_date_from_file_name(file_path)
     _read_reflog()
-    file_name = os.path.splitext(
-        os.path.basename(file_path))[0]
-    DATE = datetime.datetime.strptime(file_name, '%Y%m%d') - datetime.timedelta(1)
     with open(file_path) as f:
         for line in f:
             _handle_line(line)
 
 
+def _set_start_date_from_file_name(file_path):
+    global START_DATE
+    file_name = os.path.splitext(
+        os.path.basename(file_path))[0]
+    START_DATE = datetime.datetime.strptime(file_name, '%Y%m%d')
+
+
 def _handle_line(line):
-    day = _get_day(line)
     try:
-        timestamp, task = _get_timestamp_and_task(line)
-    except AttributeError:
-        timestamp = None
-
-    if day:
-        _close_current_day()
-        _set_datetime_to_this_day(day)
-
-    elif timestamp:
-        if _is_last_task_open():
-            _close_last_task(timestamp)
-        _start_task(timestamp, task)
-
-    elif _is_end_of_timesheet(line):
-        _close_current_day()
-        return
-
+        day = _get_day(line)
+    except ValueError:
+        try:
+            timestamp, task = _get_timestamp_and_task(line)
+        except AttributeError:
+            if _is_end_of_timesheet(line):
+                _close_current_day()
+                _report_current_day()
+            elif _is_current_task_open():
+                _add_line_to_task_notes(line)
+        else:
+            if _is_current_task_open():
+                _close_current_task(timestamp)
+            _start_task(timestamp, task)
     else:
-        if _is_last_task_open():
-            _add_line_to_task_notes(line)
+        if _is_current_task_open():
+            _close_current_day()
+            _report_current_day()
+        _update_current_day(day)
+
 
 
 def _get_day(line):
     day = line.strip()
     if day in DAYS:
         return day
+    else:
+        raise ValueError("line doesn't start day")
 
 
 def _get_timestamp_and_task(line):
@@ -61,14 +66,13 @@ def _get_timestamp_and_task(line):
     timestamp = m.group(1)
     task = line.replace(timestamp, '').strip()
     timestamp = datetime.datetime.combine(
-        DATE, datetime.time(int(timestamp[:2]), int(timestamp[-2:])))
+        CURRENT_DATE, datetime.time(int(timestamp[:2]), int(timestamp[-2:])))
     return timestamp, task
 
 
-def _set_datetime_to_this_day(day):
-    global DATE
-    # TODO days might be skipped
-    DATE += datetime.timedelta(1)
+def _update_current_day(day):
+    global START_DATE, CURRENT_DATE
+    CURRENT_DATE = START_DATE + datetime.timedelta(DAYS.index(day))
 
 
 def _start_task(timestamp, name):
@@ -85,15 +89,11 @@ def _add_line_to_task_notes(line):
     TASKS[-1]['notes'].append(line)
 
 
-def _is_last_task_open():
+def _is_current_task_open():
     return TASKS and 'end' not in TASKS[-1]
 
 
-def _remove_last_task():
-    del TASKS[-1]
-
-
-def _close_last_task(timestamp):
+def _close_current_task(timestamp):
     task = TASKS[-1]
     task['end'] = timestamp
     parts = [t.strip() for t in task['name'].split(':')]
@@ -115,19 +115,22 @@ def _get_duration(task):
     
 
 def _close_current_day():
+    global TASKS
+    del TASKS[-1]
+
+
+def _report_current_day():
     global REPORT, TASKS
-    if _is_last_task_open():
-        _remove_last_task()
-        day = TASKS[-1]['start'].strftime('%A')
-        for afk in AFK:
-            if afk in REPORT:
-                del REPORT[afk]
-        print '#' * 70
-        print day
-        print '#' * 70
-        _print_report(REPORT)
-        REPORT = {}
-        TASKS = []
+    day = TASKS[-1]['start'].strftime('%A')
+    for afk in AFK:
+        if afk in REPORT:
+            del REPORT[afk]
+    print '#' * 70
+    print day
+    print '#' * 70
+    _print_report(REPORT)
+    REPORT = {}
+    TASKS = []
 
 
 def _is_end_of_timesheet(line):
