@@ -71,7 +71,7 @@ def _get_timestamp_and_task(line):
 
 
 def _update_current_day(day):
-    global START_DATE, CURRENT_DATE
+    global CURRENT_DATE
     CURRENT_DATE = START_DATE + datetime.timedelta(DAYS.index(day))
 
 
@@ -115,7 +115,6 @@ def _get_duration(task):
     
 
 def _close_current_day():
-    global TASKS
     del TASKS[-1]
 
 
