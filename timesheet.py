@@ -10,7 +10,6 @@ REFLOG_RE = re.compile(r'^[0-9a-f]+ .*?\{([\d\-: ]+) \+.*?: (.*)$')
 AFK = ['lunch', 'afk']
 
 TASKS = []
-REPORT = {}
 REFLOG = {}
 REPORTING_GRANULARITY = 'week'
 
@@ -21,13 +20,14 @@ def main(file_path):
     with open(file_path) as f:
         for line in f:
             _handle_line(line)
+     _report()
 
 
 def _set_start_date_from_file_name(file_path):
     global START_DATE
     file_name = os.path.splitext(
         os.path.basename(file_path))[0]
-    START_DATE = datetime.datetime.strptime(file_name, '%Y%m%d')
+    START_DATE = datetime.datetime.strptime(file_name, '%Y%m%d').date()
 
 
 def _handle_line(line):
@@ -95,18 +95,6 @@ def _is_current_task_open():
 def _close_current_task(timestamp):
     task = TASKS[-1]
     task['end'] = timestamp
-    parts = [t.strip() for t in task['name'].split(':')]
-    level = REPORT
-    for part in parts:
-        if not part:
-            part = 'misc'
-        level.setdefault(part, {
-            'slots': [],
-            'duration': datetime.timedelta(0),
-            'subtasks': {},
-        })['slots'].append(task)
-        level[part]['duration'] += _get_duration(task)
-        level = level[part]['subtasks']
 
 
 def _get_duration(task):
@@ -115,38 +103,57 @@ def _get_duration(task):
 
 def _close_current_day():
     del TASKS[-1]
-    if _reporting_interval_reached():
-        _report_current_interval()
 
-def _reporting_interval_reached():
-    if REPORTING_GRANULARITY == 'day':
-        return True
-    elif REPORTING_GRANULARITY == 'week':
-        days = TASKS[-1]['end'].date() - START_DATE.date()
-        if days.days == 4:
-            return True
-    # elif REPORTING_GRANULARITY == 'month':
-    # elif REPORTING_GRANULARITY == 'year':
-    # elif REPORTING_GRANULARITY is None:
-    return False
-
-
-def _report_current_interval():
-    global REPORT, TASKS
-    day = TASKS[-1]['start'].strftime('%A')
-    for afk in AFK:
-        if afk in REPORT:
-            del REPORT[afk]
-    print '#' * 70
-    print day
-    print '#' * 70
-    _print_report(REPORT)
-    REPORT = {}
-    TASKS = []
+# def _reporting_interval_reached():
+#     if REPORTING_GRANULARITY == 'day':
+#         return True
+#     elif REPORTING_GRANULARITY == 'week':
+#         days = TASKS[-1]['end'].date() - START_DATE
+#         if days.days == 4:
+#             return True
+#     # elif REPORTING_GRANULARITY == 'month':
+#     # elif REPORTING_GRANULARITY == 'year':
+#     # elif REPORTING_GRANULARITY is None:
+#     return False
 
 
 def _is_end_of_timesheet(line):
     return '-' * 50 in line
+
+
+def _report():
+    report = {}
+    # TODO group tasks according to the time period
+    for task in TASKS:
+        parts = [t.strip() for t in task['name'].split(':')]
+        if parts[0] in AFK:
+            continue
+        level = report
+        for part in parts:
+            if not part:
+                part = 'misc'
+            level.setdefault(part, {
+                'slots': [],
+                'duration': datetime.timedelta(0),
+                'subtasks': {},
+            })['slots'].append(task)
+            level[part]['duration'] += _get_duration(task)
+            level = level[part]['subtasks']
+    _print_report(report)
+
+
+# def _report_current_interval():
+#     global REPORT, TASKS
+#     day = TASKS[-1]['start'].strftime('%A')
+#     for afk in AFK:
+#         if afk in REPORT:
+#             del REPORT[afk]
+#     print '#' * 70
+#     print day
+#     print '#' * 70
+#     _print_report(REPORT)
+#     REPORT = {}
+#     TASKS = []
 
 
 def _print_report(report, level=0):
