@@ -1,4 +1,6 @@
+import argparse
 import datetime
+import itertools
 import os
 import re
 import subprocess
@@ -11,16 +13,32 @@ AFK = ['lunch', 'afk']
 
 TASKS = []
 REFLOG = {}
-REPORTING_GRANULARITY = 'week'
 
                     
 def main(file_path):
+    global GRANULARITY
+    parser = argparse.ArgumentParser(description='Timesheet')
+    parser.add_argument('timesheet',
+                        nargs='*',
+                        help='path to time sheet file')
+    parser.add_argument('-l', '--level', type=int, default=0)
+    parser.add_argument('-g', '--granularity',
+                        default='day',
+                        choices=['day', 'week', 'month', 'year'])
+    parser.add_argument('-c', '--commits', action='store_true',
+                        help="show commits to repo")
+    args = parser.parse_args()
+
     _set_start_date_from_file_name(file_path)
     _read_reflog()
     with open(file_path) as f:
         for line in f:
             _handle_line(line)
-     _report()
+    _report(
+        granularity=args.granularity,
+        show_commits=args.commits,
+        max_level=args.level
+    )
 
 
 def _set_start_date_from_file_name(file_path):
@@ -104,42 +122,50 @@ def _get_duration(task):
 def _close_current_day():
     del TASKS[-1]
 
-# def _reporting_interval_reached():
-#     if REPORTING_GRANULARITY == 'day':
-#         return True
-#     elif REPORTING_GRANULARITY == 'week':
-#         days = TASKS[-1]['end'].date() - START_DATE
-#         if days.days == 4:
-#             return True
-#     # elif REPORTING_GRANULARITY == 'month':
-#     # elif REPORTING_GRANULARITY == 'year':
-#     # elif REPORTING_GRANULARITY is None:
-#     return False
-
 
 def _is_end_of_timesheet(line):
     return '-' * 50 in line
 
 
-def _report():
-    report = {}
-    # TODO group tasks according to the time period
-    for task in TASKS:
-        parts = [t.strip() for t in task['name'].split(':')]
-        if parts[0] in AFK:
-            continue
-        level = report
-        for part in parts:
-            if not part:
-                part = 'misc'
-            level.setdefault(part, {
-                'slots': [],
-                'duration': datetime.timedelta(0),
-                'subtasks': {},
-            })['slots'].append(task)
-            level[part]['duration'] += _get_duration(task)
-            level = level[part]['subtasks']
-    _print_report(report)
+def _report(granularity='day', show_commits=False, max_level=1):
+    key_func = globals()['_by_%s' % granularity]
+    for period, tasks in itertools.groupby(TASKS, key_func):
+        report = {}
+        for task in tasks:
+            parts = [t.strip() for t in task['name'].split(':')]
+            if parts[0] in AFK:
+                continue
+            level = report
+            for part in parts:
+                if not part:
+                    part = 'misc'
+                level.setdefault(part, {
+                    'slots': [],
+                    'duration': datetime.timedelta(0),
+                    'subtasks': {},
+                })['slots'].append(task)
+                level[part]['duration'] += _get_duration(task)
+                level = level[part]['subtasks']
+        _print_report(report, show_commits=show_commits, max_level=max_level)
+
+
+def _by_day(task):
+    return task['start'].date()
+
+
+def _by_week(task):
+    isocalendar = task['start'].date().isocalendar()
+    return isocalendar[:2]
+
+
+def _by_month(task):
+    date = task['start'].date()
+    return date.year, date.month
+
+
+def _by_year(task):
+    date = task['start'].date()
+    return date.year
 
 
 # def _report_current_interval():
@@ -156,7 +182,7 @@ def _report():
 #     TASKS = []
 
 
-def _print_report(report, level=0):
+def _print_report(report, level=0, max_level=0, show_commits=False):
     tasks = report.keys()
     tasks.sort(key=lambda t: -report[t]['duration'])
     if level == 0:
@@ -169,16 +195,18 @@ def _print_report(report, level=0):
         print '%-50s%s' % (
             indent + task,
             _man_days(details['duration']))
-        reflog = []
-        for slot in details['slots']:
-            reflog.extend(
-                i for i in REFLOG.items()
-                if slot['start'] <= i[0] < slot['end']
-            )
-        reflog.sort()
-        if reflog:
-            print ('\n' + indent).join(l[1] for l in reflog)
-        _print_report(details['subtasks'], level + 1)
+        if show_commits:
+            reflog = []
+            for slot in details['slots']:
+                reflog.extend(
+                    i for i in REFLOG.items()
+                    if slot['start'] <= i[0] < slot['end']
+                )
+            reflog.sort()
+            if reflog:
+                print ('\n' + indent).join(l[1] for l in reflog)
+        if level < max_level:
+            _print_report(details['subtasks'], level + 1, max_level=max_level, show_commits=show_commits)
     if level == 1:
         print
 
