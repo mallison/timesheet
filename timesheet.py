@@ -4,7 +4,6 @@ import itertools
 import os
 import re
 import subprocess
-import sys
 
 DAYS = [datetime.date(2014, 2, d).strftime('%A') for d in range(3, 10)]
 TASK_START_REGEX = re.compile(r'(\d{4})')
@@ -15,7 +14,7 @@ TASKS = []
 REFLOG = {}
 
                     
-def main(file_path):
+def main():
     global GRANULARITY
     parser = argparse.ArgumentParser(description='Timesheet')
     parser.add_argument('timesheet',
@@ -29,11 +28,12 @@ def main(file_path):
                         help="show commits to repo")
     args = parser.parse_args()
 
-    _set_start_date_from_file_name(file_path)
     _read_reflog()
-    with open(file_path) as f:
-        for line in f:
-            _handle_line(line)
+    for path in args.timesheet:
+        _set_start_date_from_file_name(path)
+        with open(path) as f:
+            for line in f:
+                _handle_line(line)
     _report(
         granularity=args.granularity,
         show_commits=args.commits,
@@ -67,7 +67,6 @@ def _handle_line(line):
         if _is_current_task_open():
             _close_current_day()
         _update_current_day(day)
-
 
 
 def _get_day(line):
@@ -146,7 +145,7 @@ def _report(granularity='day', show_commits=False, max_level=1):
                 })['slots'].append(task)
                 level[part]['duration'] += _get_duration(task)
                 level = level[part]['subtasks']
-        _print_report(report, show_commits=show_commits, max_level=max_level)
+        _print_report(period, report, show_commits=show_commits, max_level=max_level)
 
 
 def _by_day(task):
@@ -168,26 +167,12 @@ def _by_year(task):
     return date.year
 
 
-# def _report_current_interval():
-#     global REPORT, TASKS
-#     day = TASKS[-1]['start'].strftime('%A')
-#     for afk in AFK:
-#         if afk in REPORT:
-#             del REPORT[afk]
-#     print '#' * 70
-#     print day
-#     print '#' * 70
-#     _print_report(REPORT)
-#     REPORT = {}
-#     TASKS = []
-
-
-def _print_report(report, level=0, max_level=0, show_commits=False):
+def _print_report(period, report, level=0, max_level=0, show_commits=False):
     tasks = report.keys()
     tasks.sort(key=lambda t: -report[t]['duration'])
     if level == 0:
         overall = sum((d['duration'] for d in report.values()), datetime.timedelta(0))
-        print '%-50s%s' % ('OVERALL', _man_days(overall))
+        print '%-50s%s' % (period, _man_days(overall))
         print '-' * 70
     for task in tasks:
         details = report[task]
@@ -206,8 +191,9 @@ def _print_report(report, level=0, max_level=0, show_commits=False):
             if reflog:
                 print ('\n' + indent).join(l[1] for l in reflog)
         if level < max_level:
-            _print_report(details['subtasks'], level + 1, max_level=max_level, show_commits=show_commits)
-    if level == 1:
+            _print_report(period, details['subtasks'], level + 1, max_level=max_level, show_commits=show_commits)
+    if level == 0:
+        print
         print
 
 
@@ -244,7 +230,7 @@ def _read_reflog():
     global REFLOG
     contents = subprocess.check_output(
         ['git', 'reflog', '--date', 'iso', '--all'],
-        cwd='/Users/user/thebbgroup/cosmo',
+        cwd='/Users/user/di/src',
     )
     for line in contents.splitlines():
         m = REFLOG_RE.match(line)
@@ -254,4 +240,4 @@ def _read_reflog():
 
 
 if __name__ == '__main__':
-    main(sys.argv[1])
+    main()
