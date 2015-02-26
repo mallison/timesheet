@@ -16,6 +16,10 @@ REFLOG = {}
 START_DATE = CURRENT_DATE = None
 
 
+class EndOfTimesheet(Exception):
+    pass
+
+
 def main():
     global START_DATE
     parser = argparse.ArgumentParser(description='Timesheet')
@@ -35,7 +39,10 @@ def main():
         START_DATE = _get_start_date_from_file_name(path)
         with open(path) as f:
             for line in f:
-                _handle_line(line)
+                try:
+                    _handle_line(line)
+                except EndOfTimesheet:
+                    break
     _report(
         granularity=args.granularity,
         show_commits=args.commits,
@@ -50,36 +57,36 @@ def _get_start_date_from_file_name(file_path):
 
 
 def _handle_line(line):
-    try:
-        day = _get_day(line)
-    except ValueError:
-        try:
-            timestamp, task = _get_timestamp_and_task(line)
-        except AttributeError:
-            if _is_end_of_timesheet(line):
-                _close_current_day()
-            elif _is_current_task_open():
-                _add_line_to_task_notes(line)
-        else:
-            if _is_current_task_open():
-                _close_current_task(timestamp)
-            _start_task(timestamp, task)
-    else:
+    day = _get_day(line)
+    if day:
         if _is_current_task_open():
             _close_current_day()
         _update_current_day(day)
+    else:
+        timestamp, task = _get_timestamp_and_task(line)
+        if timestamp:
+            if _is_current_task_open():
+                _close_current_task(timestamp)
+            _start_task(timestamp, task)
+        elif _is_end_of_timesheet(line):
+            _close_current_day()
+            raise EndOfTimesheet
+        elif _is_current_task_open():
+            _add_line_to_task_notes(line)
+        else:
+            raise ValueError('Unexpected line %s' % line)
 
-
+            
 def _get_day(line):
     day = line.strip()
     if day in DAYS:
         return day
-    else:
-        raise ValueError("line doesn't start day")
 
 
 def _get_timestamp_and_task(line):
     m = TASK_START_REGEX.match(line)
+    if not m:
+        return None, None
     timestamp = m.group(1)
     task = line.replace(timestamp, '').strip()
     timestamp = datetime.datetime.combine(
