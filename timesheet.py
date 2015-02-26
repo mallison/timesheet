@@ -13,9 +13,11 @@ AFK = ['lunch', 'afk']
 TASKS = []
 REFLOG = {}
 
-                    
+START_DATE = CURRENT_DATE = None
+
+
 def main():
-    global GRANULARITY
+    global START_DATE
     parser = argparse.ArgumentParser(description='Timesheet')
     parser.add_argument('timesheet',
                         nargs='*',
@@ -30,7 +32,7 @@ def main():
 
     _read_reflog()
     for path in args.timesheet:
-        _set_start_date_from_file_name(path)
+        START_DATE = _get_start_date_from_file_name(path)
         with open(path) as f:
             for line in f:
                 _handle_line(line)
@@ -41,11 +43,10 @@ def main():
     )
 
 
-def _set_start_date_from_file_name(file_path):
-    global START_DATE
+def _get_start_date_from_file_name(file_path):
     file_name = os.path.splitext(
         os.path.basename(file_path))[0]
-    START_DATE = datetime.datetime.strptime(file_name, '%Y%m%d').date()
+    return datetime.datetime.strptime(file_name, '%Y%m%d').date()
 
 
 def _handle_line(line):
