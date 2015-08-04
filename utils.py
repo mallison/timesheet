@@ -1,3 +1,6 @@
+from datetime import datetime
+
+
 def minutes_as_man_days(minutes):
     """
     Return ``minutes`` in human readable man days.
@@ -19,4 +22,10 @@ def minutes_as_man_days(minutes):
 
 
 def hhmm_to_minutes(hhmm):
+    if hhmm == '9999':
+        hhmm = get_current_time()
     return 60 * int(hhmm[:2]) + int(hhmm[2:])
+
+
+def get_current_time():
+    return datetime.now().strftime('%H%M')
