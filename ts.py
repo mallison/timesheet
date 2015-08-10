@@ -22,8 +22,13 @@ def main():
                 if parts[0] not in ['afk', 'lunch']:
                     sub_task = tally
                     for part in ['main', day] + parts:
+                        if time < start:
+                            # assume wraps around midnight
+                            interval = 24 * 60 - start + time
+                        else:
+                            interval = time - start
                         sub_task.setdefault(
-                            part, get_task())['total'] += time - start
+                            part, get_task())['total'] += interval
                         sub_task = sub_task[part]['sub']
             start = time
             task = m.group(2) or 'misc'
