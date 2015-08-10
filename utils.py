@@ -2,6 +2,8 @@ from datetime import datetime
 
 
 def print_task(name, data, indent=0):
+    if indent > 2:
+        name, data = collapse_tasks(name, data)
     rows = [
         [
             indent,
@@ -16,6 +18,16 @@ def print_task(name, data, indent=0):
     if indent == 0:
         tabulate(rows)
     return rows
+
+
+def collapse_tasks(name, data):
+    # if a parent and subtask take the same time collapse to one line
+    if len(data['sub'].keys()) == 1:
+        sub_task = data['sub'].keys()[0]
+        if data['total'] == data['sub'][sub_task]['total']:
+            _name, data = collapse_tasks(sub_task, data['sub'][sub_task])
+            name += ': ' + _name
+    return name, data
 
 
 def tabulate(rows):
