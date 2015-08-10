@@ -10,17 +10,17 @@ TASK_START = re.compile(r'^(\d{4}) ?(.*)$')
 def main():
     tally = {}
     for line in sys.stdin.readlines():
-        m = DAY_START.match(line)
-        if m:
+        day_match = DAY_START.match(line)
+        task_match = TASK_START.match(line)
+        if day_match:
             start = None
-            day = m.group(1)
-        m = TASK_START.match(line)
-        if m:
-            time = utils.hhmm_to_minutes(m.group(1))
+            day = day_match.group(1)
+        elif task_match:
+            time = utils.hhmm_to_minutes(task_match.group(1))
             if start:
                 add_interval_to_tally(tally, day, task, start, time)
             start = time
-            task = m.group(2) or 'misc'
+            task = task_match.group(2) or 'misc'
     utils.print_task('main', tally['main'])
 
 
