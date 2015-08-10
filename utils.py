@@ -12,7 +12,7 @@ def print_task(name, data, indent=0):
         ]
     ]
     sub_tasks = data['sub'].items()
-    sub_tasks.sort(key=lambda sub: sub[1]['total'])
+    sub_tasks.sort(key=lambda sub: sub[1]['total'], reverse=True)
     for task, data in sub_tasks:
         rows.extend(print_task(task, data, indent + 2))
     if indent == 0:
