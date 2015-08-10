@@ -32,7 +32,7 @@ def main():
                         sub_task = sub_task[part]['sub']
             start = time
             task = m.group(2) or 'misc'
-    print_task('main', tally['main'])
+    utils.print_task('main', tally['main'])
 
 
 def get_task():
@@ -41,15 +41,6 @@ def get_task():
         'sub': {}
     }
 
-
-def print_task(name, data, indent=0):
-    print '{}{} {}'.format(' ' * indent,
-                           name,
-                           utils.minutes_as_man_days(data['total']))
-    sub_tasks = data['sub'].items()
-    sub_tasks.sort(key=lambda sub: sub[1]['total'])
-    for task, data in sub_tasks:
-        print_task(task, data, indent + 4)
 
 if __name__ == '__main__':
     main()
