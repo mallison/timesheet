@@ -25,8 +25,10 @@ def collapse_tasks(name, data):
     if len(data['sub'].keys()) == 1:
         sub_task = data['sub'].keys()[0]
         if data['total'] == data['sub'][sub_task]['total']:
-            _name, data = collapse_tasks(sub_task, data['sub'][sub_task])
-            name += ': ' + _name
+            # _name, data = collapse_tasks(sub_task, data['sub'][sub_task])
+            # name += ': ' + _name
+            collapse_tasks(sub_task, data['sub'][sub_task])
+            data['total'] = 0
     return name, data
 
 
@@ -41,8 +43,13 @@ def tabulate(rows):
                 formatted_duration += '{:>3}{}'.format(amount, unit)
             else:
                 formatted_duration += '    '
-        print '{:.<{max_width}}{}'.format(
-            (' ' * indent + task), formatted_duration, max_width=max_width)
+        # formatted_duration = '{:.>10}'.format(formatted_duration.strip())
+        if sum(duration):
+            fill = '.'
+        else:
+            fill = ' '
+        print '{:{fill}<{max_width}}{}'.format(
+            (' ' * indent + task), formatted_duration, fill=fill, max_width=max_width)
 
 
 def minutes_as_man_days(minutes):
