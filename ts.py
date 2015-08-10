@@ -3,7 +3,7 @@ import sys
 
 import utils
 
-DAY_START = re.compile(r'^(Mon|Tues|Wednes|Thurs|Fri)day$')
+DAY_START = re.compile(r'^(Monday|Tuesday|Wednesday|Thursday|Friday|\d{1,2}/\d{1,2}/\d{2})$')
 TASK_START = re.compile(r'^(\d{4}) ?(.*)$')
 
 
@@ -13,7 +13,7 @@ def main():
         m = DAY_START.match(line)
         if m:
             start = None
-            day = m.group(1) + 'day'
+            day = m.group(1)
         m = TASK_START.match(line)
         if m:
             time = utils.hhmm_to_minutes(m.group(1))
