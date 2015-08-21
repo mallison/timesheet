@@ -35,7 +35,7 @@ def collapse_tasks(name, data):
 def tabulate(rows):
     max_width = max(len(r[1]) + r[0] for r in rows)
     for indent, task, duration in rows:
-        if indent <= 4:
+        if indent < 4:
             print
         formatted_duration = ''
         for amount, unit in zip(duration, 'dhm'):
