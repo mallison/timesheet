@@ -1,42 +1,45 @@
 from datetime import datetime
 
 
-def print_task(name, data, indent=0):
-    if indent > 2:
-        name, data = collapse_tasks(name, data)
+def print_task(name, data, top=True, indent=0):
+    # if indent > 2:
+    name, data = collapse_tasks(name, data)
+    # from pprint import pprint
+    # pprint(data)
     rows = [
         [
             indent,
             name,
-            minutes_as_man_days(data['total'])
+            minutes_as_man_days(data['duration'])
         ]
     ]
-    sub_tasks = data['sub'].items()
-    sub_tasks.sort(key=lambda sub: sub[1]['total'], reverse=True)
+    sub_tasks = data['subtasks'].items()
+    sub_tasks.sort(key=lambda sub: sub[1]['duration'], reverse=True)
     for task, data in sub_tasks:
-        rows.extend(print_task(task, data, indent + 2))
-    if indent == 0:
+        rows.extend(print_task(task, data, False, indent + 2))
+    if top:
         tabulate(rows)
     return rows
 
 
 def collapse_tasks(name, data):
     # if a parent and subtask take the same time collapse to one line
-    if len(data['sub'].keys()) == 1:
-        sub_task = data['sub'].keys()[0]
-        if data['total'] == data['sub'][sub_task]['total']:
-            # _name, data = collapse_tasks(sub_task, data['sub'][sub_task])
+    if len(data['subtasks'].keys()) == 1:
+        sub_task = data['subtasks'].keys()[0]
+        if data['duration'] == data['subtasks'][sub_task]['duration']:
+            # _name, data = collapse_tasks(sub_task, data['subtasks'][sub_task])
             # name += ': ' + _name
-            collapse_tasks(sub_task, data['sub'][sub_task])
-            data['total'] = 0
+            collapse_tasks(sub_task, data['subtasks'][sub_task])
+            data['duration'] = 0
     return name, data
 
 
 def tabulate(rows):
-    max_width = max(len(r[1]) + r[0] for r in rows)
+    # max_width = max(len(r[1]) + r[0] for r in rows)
+    max_width = 80
     for indent, task, duration in rows:
-        if indent < 4:
-            print
+        # if indent < 4:
+        #     print
         formatted_duration = ''
         for amount, unit in zip(duration, 'dhm'):
             if amount:
