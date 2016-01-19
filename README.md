@@ -29,40 +29,16 @@ Run the timesheet script:
 
     $ python /path/to/timesheet/package /path/to/timesheet/text/file [/another/timesheet/file ....]
     
-Get a report like this:
+Get this report:
 
-    Mon Sep 30, 2013
-    bb: eu                         2h 23m          ##################################################
-    code review: country/lang tagg 2h 10m          #############################################
-                                   1h 13m          #########################
-    500: counselling               54m             ##################
-    dev ops                        30m             ##########
-    stand up                       16m             #####
-    OVERALL                        7h 26m
-
-See your commit activity per task with the ``--commit`` switch.
-
-    Mon Sep 30, 2013
-    bb: eu                         2h 23m          ##################################################
-        1136 commit: fixes to chatrooms views
-        1136 commit: fixes to chatroom module
-        1103 commit: Bring back supervision room view
-        1103 commit: Fix main chatroom view
-        1332 WIP on minor-lang-chat: ca417a9 Add links to other chatrooms from chat module
-
-    code review: country/lang tagg 2h 10m          #############################################
-
-                                   1h 13m          #########################
-
-    500: counselling               54m             ##################
-        0918 branch: Created from master
-
-    dev ops                        30m             ##########
-
-    stand up                       16m             #####
-        1253 commit: Add links to other chatrooms from chat module
-
-    OVERALL             	       7h 26m
-
-See also the ``--stand-up`` and ``--eom`` options.
-
+    Tue 19 Jan......................................................................  1d     26m
+      bb                                                                                        
+        eu                                                                                      
+          minor lang chat...........................................................      2h 23m
+      code review                                                                               
+        country/lang tagging........................................................      2h 10m
+      misc..........................................................................      1h 13m
+      500                                                                                       
+        counselling.................................................................         54m
+      dev ops.......................................................................         30m
+      stand up......................................................................         16m
