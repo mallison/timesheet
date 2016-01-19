@@ -1,31 +1,7 @@
-- [ ] read input from files not stdin
+- [ ] update README!
+- [ ] bit of general code tidy!!
 - [ ] add option to sort days/weeks/months/years by total time
-- [ ] add back depth argument for showing task times
-
-total, year, day
-year, month,
-year, month, day
-year, ww
-
-total, day
-
-
-differentiate granularity from task/sub task
-
-
-all > month > day | task > subtask > subtask => 20 minutes
-
-(date, [task, subtask, ...], time)
-
-groupby 
-
-total task = total + total of all sub tasks
-
-# TODO Slot = named_tuple("start task duration")
-
-
-
-
-
-
-
+- [ ] add back --stand-ip and --eom options?
+- [ ] use named_tuple for slot
+- [ ] add back bar chart
+- [ ] make grouping of levels optional -- may want to order by sub task times
