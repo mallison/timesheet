@@ -1,5 +1,4 @@
 import itertools
-from datetime import datetime
 
 AFK = ['lunch', 'afk']
 
@@ -7,24 +6,12 @@ def report(slots, granularity, max_depth=1, indent=0):
     time_unit = granularity[0]
     key_func = _get_key_func(time_unit)
     for period, slots_in_period in itertools.groupby(slots, key_func):
-        period_summary = {}
         slots_in_period = list(slots_in_period)
-        for slot in slots_in_period:
-            task = slot[1]
-            if task[0] in AFK:
-                continue
-            level = period_summary
-            levels = ['main'] + task[:max_depth]
-            for subtask in levels:
-                if not subtask:
-                    subtask = 'misc'
-                level.setdefault(subtask, {
-                    'duration': 0,
-                    'subtasks': {},
-                })
-                level[subtask]['duration'] += slot[2]
-                level = level[subtask]['subtasks']
-        print_task(period, period_summary['main'], indent=indent)
+        task_summary = _get_task_durations_for_period(
+            slots_in_period,
+            max_depth
+        )
+        _print_task_summary(period, task_summary, indent=indent)
         print
         if len(granularity) > 1:
             report(slots_in_period, granularity[1:], max_depth, indent +  4)
@@ -42,52 +29,64 @@ def _get_key_func(granularity):
     raise ValueError("Granularity '%s' is not valid" % granularity)
 
 
-def print_task(name, data, top=True, indent=0):
-    # if indent > 2:
-    name, data = collapse_tasks(name, data)
-    # from pprint import pprint
-    # pprint(data)
+def _get_task_durations_for_period(slots_in_period, max_depth):
+    task_summary = {}
+    for slot in slots_in_period:
+        task = slot.task
+        if task[0] in AFK:
+            continue
+        level = task_summary
+        levels = ['main'] + task[:max_depth]
+        for subtask in levels:
+            if not subtask:
+                subtask = 'misc'
+            level.setdefault(subtask, {
+                'duration': 0,
+                'subtasks': {},
+            })
+            level[subtask]['duration'] += slot.duration
+            level = level[subtask]['subtasks']
+    return task_summary['main']
+
+
+def _print_task_summary(name, data, top=True, indent=0):
+    _collapse_tasks(data)
     rows = [
         [
             indent,
             name,
-            minutes_as_man_days(data['duration'])
+            _minutes_as_man_days(data['duration'])
         ]
     ]
-    sub_tasks = data['subtasks'].items()
-    sub_tasks.sort(key=lambda sub: sub[1]['duration'], reverse=True)
-    for task, data in sub_tasks:
-        rows.extend(print_task(task, data, False, indent + 2))
+    subtasks = data['subtasks'].items()
+    subtasks.sort(key=lambda sub: sub[1]['duration'], reverse=True)
+    for task, data in subtasks:
+        rows.extend(_print_task_summary(task, data, False, indent + 2))
     if top:
-        tabulate(rows)
+        _tabulate(rows)
     return rows
 
 
-def collapse_tasks(name, data):
-    # if a parent and subtask take the same time collapse to one line
+def _collapse_tasks(data):
+    # if a parent and subtask take the same time only show duration for
+    # subtask
     if len(data['subtasks'].keys()) == 1:
-        sub_task = data['subtasks'].keys()[0]
-        if data['duration'] == data['subtasks'][sub_task]['duration']:
-            # _name, data = collapse_tasks(sub_task, data['subtasks'][sub_task])
-            # name += ': ' + _name
-            collapse_tasks(sub_task, data['subtasks'][sub_task])
+        subtask = data['subtasks'].keys()[0]
+        if data['duration'] == data['subtasks'][subtask]['duration']:
+            _collapse_tasks(data['subtasks'][subtask])
             data['duration'] = 0
-    return name, data
 
 
-def tabulate(rows):
+def _tabulate(rows):
     # max_width = max(len(r[1]) + r[0] for r in rows)
     max_width = 80
     for indent, task, duration in rows:
-        # if indent < 4:
-        #     print
         formatted_duration = ''
         for amount, unit in zip(duration, 'dhm'):
             if amount:
                 formatted_duration += '{:>3}{}'.format(amount, unit)
             else:
                 formatted_duration += '    '
-        # formatted_duration = '{:.>10}'.format(formatted_duration.strip())
         if sum(duration):
             fill = '.'
         else:
@@ -96,7 +95,7 @@ def tabulate(rows):
             (' ' * indent + task), formatted_duration, fill=fill, max_width=max_width)
 
 
-def minutes_as_man_days(minutes):
+def _minutes_as_man_days(minutes):
     days, minutes = divmod(minutes, 7 * 60)
     hours, minutes = divmod(minutes, 60)
     return days, hours, minutes

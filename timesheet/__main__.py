@@ -19,11 +19,7 @@ def main():
     parser.add_argument('-d', '--max-depth', type=int, default=1)
     args = parser.parse_args()
     granularity = [u for u in TIME_UNITS if u in args.granularity]
-    slots = parse.read_timesheets(
-        args.timesheet,
-        granularity=granularity,
-        max_depth=args.max_depth
-    )
+    slots = parse.read_timesheets(args.timesheet)
     report.report(slots, granularity, args.max_depth)
 
 if __name__ == '__main__':
