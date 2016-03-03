@@ -1,7 +1,6 @@
-- [ ] update README!
-- [ ] bit of general code tidy!!
-- [ ] add option to sort days/weeks/months/years by total time
-- [ ] add back --stand-ip and --eom options?
-- [ ] use named_tuple for slot
+- [ ] make in to proper library
+- [ ] still not quite happy with formatting
 - [ ] add back bar chart
 - [ ] make grouping of levels optional -- may want to order by sub task times
+- [ ] add option to sort days/weeks/months/years by total time
+- [ ] add back --stand-up and --eom options?
