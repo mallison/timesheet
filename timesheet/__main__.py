@@ -15,7 +15,8 @@ def main():
                         help='path to time sheet file(s)')
     parser.add_argument('-g', '--granularity',
                         action='append',
-                        choices=TIME_UNITS)
+                        choices=TIME_UNITS,
+                        default=['week', 'day'])
     parser.add_argument('-d', '--max-depth', type=int, default=1)
     args = parser.parse_args()
     granularity = [u for u in TIME_UNITS if u in args.granularity]
