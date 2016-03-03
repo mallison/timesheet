@@ -96,6 +96,6 @@ def _tabulate(rows):
 
 
 def _minutes_as_man_days(minutes):
-    days, minutes = divmod(minutes, 7 * 60)
+    days, minutes = divmod(minutes, 8 * 60)
     hours, minutes = divmod(minutes, 60)
     return days, hours, minutes
